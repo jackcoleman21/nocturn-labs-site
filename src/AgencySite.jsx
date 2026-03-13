@@ -1863,25 +1863,24 @@ function SpaceGallery() {
   return (
     <section id="work" ref={containerRef} style={{ height: '500vh', position: 'relative' }}>
       <style>{`
-        .sg-canvas{position:sticky;top:0;width:100%;height:100vh;z-index:0}
-        .sg-ui{position:sticky;top:0;height:0;z-index:3;pointer-events:none}
-        .sg-ui button,.sg-ui a{pointer-events:all}
-        .sg-hud{position:fixed;top:2.2rem;left:2.5rem;display:flex;align-items:baseline;gap:.8rem;pointer-events:none;z-index:4}
+        .sg-canvas{position:sticky;top:0;width:100%;height:100vh;z-index:0;overflow:hidden}
+        .sg-ov{position:absolute;inset:0;pointer-events:none}
+        .sg-hud{position:absolute;top:2.2rem;left:2.5rem;display:flex;align-items:baseline;gap:.8rem;pointer-events:none;z-index:4}
         .sg-hud-n{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:clamp(1.6rem,4vw,2.8rem);color:rgba(237,232,224,.08)}
         .sg-hud-l{font-family:'DM Sans',sans-serif;font-weight:300;font-size:12px;letter-spacing:.5em;text-transform:uppercase;color:rgba(237,232,224,.4)}
-        .sg-plbl{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:4;transition:opacity .6s,transform .6s}
+        .sg-plbl{position:absolute;bottom:5.5rem;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:4;transition:opacity .6s,transform .6s}
         .sg-plbl-n{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:italic;font-size:clamp(1.8rem,3.5vw,2.8rem);letter-spacing:-.02em;text-shadow:0 0 50px rgba(1,1,8,1),0 0 100px rgba(1,1,8,.7)}
         .sg-plbl-t{font-family:'DM Sans',sans-serif;font-weight:300;font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:rgba(237,232,224,.55);margin-top:.5rem}
         .sg-plbl-h{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.18);margin-top:.8rem}
-        .sg-dbar{position:fixed;right:2rem;top:50%;transform:translateY(-50%);width:1px;height:28vh;background:rgba(255,255,255,.04);z-index:4}
+        .sg-dbar{position:absolute;right:2rem;top:50%;transform:translateY(-50%);width:1px;height:28vh;background:rgba(255,255,255,.04);z-index:4}
         .sg-dpip{position:absolute;left:-3px;width:7px;height:7px;border-radius:50%;border:1px solid rgba(237,232,224,.2);background:rgba(237,232,224,.06);transition:top .4s cubic-bezier(.22,1,.36,1)}
-        .sg-hint{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.15);z-index:4;transition:opacity .5s}
-        .sg-xbtn{position:fixed;top:24px;right:24px;z-index:10;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .5s cubic-bezier(.22,1,.36,1)}
+        .sg-hint{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.15);z-index:4;transition:opacity .5s}
+        .sg-xbtn{position:absolute;top:24px;right:24px;z-index:10;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .5s cubic-bezier(.22,1,.36,1)}
         .sg-xbtn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25)}
         .sg-xbtn::before,.sg-xbtn::after{content:'';position:absolute;top:50%;left:50%;width:15px;height:1.5px;background:#ede8e0;transform-origin:center}
         .sg-xbtn::before{transform:translate(-50%,-50%) rotate(45deg)}
         .sg-xbtn::after{transform:translate(-50%,-50%) rotate(-45deg)}
-        .sg-spnl{position:fixed;top:0;left:0;width:42%;height:100%;background:linear-gradient(to right,rgba(1,1,8,.95) 0%,rgba(1,1,8,.92) 45%,rgba(1,1,8,.6) 78%,transparent 100%);display:flex;flex-direction:column;justify-content:center;padding:4rem 2rem 4rem 3rem;z-index:5;transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
+        .sg-spnl{position:absolute;top:0;left:0;width:42%;height:100%;background:linear-gradient(to right,rgba(1,1,8,.95) 0%,rgba(1,1,8,.92) 45%,rgba(1,1,8,.6) 78%,transparent 100%);display:flex;flex-direction:column;justify-content:center;padding:4rem 2rem 4rem 3rem;z-index:5;transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
         .sg-spnl.on{opacity:1;transform:translateX(0);pointer-events:all}
         .sg-sl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:12px;letter-spacing:.5em;text-transform:uppercase;margin-bottom:.6rem}
         .sg-sh{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:italic;font-size:clamp(1.4rem,2.5vw,2rem);line-height:1.12;margin-bottom:.6rem}
@@ -1897,9 +1896,9 @@ function SpaceGallery() {
         .sg-snb{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,232,224,.4);background:none;border:none;cursor:pointer;transition:color .3s}
         .sg-snb:hover{color:var(--sg-ac,#e8622c)}
         .sg-spr{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:11px;color:rgba(237,232,224,.25)}
-        .sg-vcta{position:fixed;bottom:12%;right:5%;display:inline-flex;align-items:center;gap:10px;padding:12px 26px;border-radius:26px;color:#010108;font-family:'JetBrains Mono',monospace;font-weight:400;font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;cursor:pointer;z-index:5;transition:all .6s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 30px rgba(0,0,0,.15)}
+        .sg-vcta{position:absolute;bottom:12%;right:5%;display:inline-flex;align-items:center;gap:10px;padding:12px 26px;border-radius:26px;color:#010108;font-family:'JetBrains Mono',monospace;font-weight:400;font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;cursor:pointer;z-index:5;transition:all .6s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 30px rgba(0,0,0,.15)}
         .sg-vcta:hover{filter:brightness(1.15);transform:translateY(-1px)}
-        .sg-kbh{position:fixed;bottom:2rem;right:2rem;display:flex;flex-direction:column;gap:.4rem;z-index:4;pointer-events:none}
+        .sg-kbh{position:absolute;bottom:2rem;right:2rem;display:flex;flex-direction:column;gap:.4rem;z-index:4;pointer-events:none}
         .sg-kb{display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-weight:200;font-size:9px;letter-spacing:.15em;color:rgba(237,232,224,.15)}
         .sg-kbk{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:16px;padding:0 4px;border:1px solid rgba(237,232,224,.1);border-radius:3px;font-size:8px;color:rgba(237,232,224,.25)}
         @media(max-width:768px){
@@ -1911,12 +1910,12 @@ function SpaceGallery() {
         }
       `}</style>
 
-      <div className="sg-canvas" style={{ overflow: 'hidden' }}>
-        <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
+      <div className="sg-canvas" style={{ position: 'relative' }}>
+        <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
 
         {/* Overlays */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1, background: 'radial-gradient(ellipse at 50% 50%,transparent 10%,rgba(1,1,8,.1) 30%,rgba(1,1,8,.4) 60%,rgba(1,1,8,.8) 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2, opacity: 0.03, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px)" }} />
+        <div className="sg-ov" style={{ zIndex: 1, background: 'radial-gradient(ellipse at 50% 50%,transparent 10%,rgba(1,1,8,.1) 30%,rgba(1,1,8,.4) 60%,rgba(1,1,8,.8) 100%)' }} />
+        <div className="sg-ov" style={{ zIndex: 2, opacity: 0.03, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px)" }} />
 
         {/* HUD */}
         <div className="sg-hud">
