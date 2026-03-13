@@ -1693,6 +1693,7 @@ function ServiceItem({ service, index, activeService, setActiveService }) {
   const isActive = activeService === index;
   return (
     <div ref={ref} data-hover onMouseEnter={() => setActiveService(index)} onMouseLeave={() => setActiveService(null)}
+      className="service-item"
       style={{ opacity: vis ? 1 : 0, transform: vis ? "translateX(0)" : "translateX(-40px)", transition: `all 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.08}s`, borderTop: "1px solid rgba(255,255,255,0.08)", padding: "40px 0", cursor: "pointer", display: "grid", gridTemplateColumns: "60px 1fr 1fr", gap: "40px", alignItems: "start" }}>
       <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", color: isActive ? "#e8622c" : "rgba(255,255,255,0.4)", transition: "color 0.3s", letterSpacing: "1px" }}>{service.num}</span>
       <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "36px", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400, letterSpacing: "-1px", transform: isActive ? "translateX(16px)" : "translateX(0)", transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>{service.title}</h3>
@@ -2307,21 +2308,6 @@ export default function AgencySite() {
         @media (pointer: coarse) { * { cursor: auto !important; } }
         @media (pointer: fine) { * { cursor: none !important; } }
 
-        @media (max-width: 767px) {
-          section { padding-left: 20px !important; padding-right: 20px !important; }
-          footer { padding-left: 20px !important; padding-right: 20px !important; }
-          .philosophy-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
-          .process-grid { grid-template-columns: 1fr 1fr !important; }
-          .project-row-grid { grid-template-columns: 1fr !important; gap: 12px !important; padding: 0 20px !important; }
-          .project-row-grid > *:nth-child(1) { display: none !important; }
-          .project-row-grid > *:nth-child(3) { display: none !important; }
-          .project-row-grid > *:nth-child(4) { display: none !important; }
-          .project-row-grid h3 { font-size: 32px !important; }
-          .footer-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
-          .faq-layout { padding: 0 !important; }
-          .faq-layout > div:first-child { position: static !important; }
-          .client-logos { grid-template-columns: 1fr 1fr !important; }
-        }
         @media (max-width: 1023px) {
           .stats-grid { grid-template-columns: 1fr 1fr !important; }
           .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
@@ -2333,6 +2319,33 @@ export default function AgencySite() {
           .faq-layout { grid-template-columns: 1fr !important; gap: 40px !important; }
           .contact-grid { grid-template-columns: 1fr !important; }
           .process-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .service-item { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .service-item p { opacity: 1 !important; max-height: none !important; }
+        }
+        @media (max-width: 767px) {
+          section { padding-left: 20px !important; padding-right: 20px !important; }
+          footer { padding-left: 20px !important; padding-right: 20px !important; }
+          .philosophy-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .process-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+          .project-row-grid { grid-template-columns: 1fr !important; gap: 12px !important; padding: 0 20px !important; }
+          .project-row-grid > *:nth-child(1) { display: none !important; }
+          .project-row-grid > *:nth-child(3) { display: none !important; }
+          .project-row-grid > *:nth-child(4) { display: none !important; }
+          .project-row-grid h3 { font-size: 32px !important; }
+          .footer-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .faq-layout { padding: 0 !important; }
+          .faq-layout > div:first-child { position: static !important; }
+          .client-logos { grid-template-columns: 1fr 1fr !important; }
+          .services-header { grid-template-columns: 1fr !important; gap: 24px !important; }
+          .about-layout { flex-direction: column !important; }
+          .about-layout > div:first-child { width: 100% !important; position: static !important; }
+          .contact-layout { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .contact-grid { grid-template-columns: 1fr !important; }
+          .pricing-grid { grid-template-columns: 1fr !important; }
+          .stats-grid { grid-template-columns: 1fr 1fr !important; }
+          .service-item { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .service-item p { opacity: 1 !important; max-height: none !important; }
+          #top { padding: 120px 20px 60px !important; }
         }
       `}</style>
 
