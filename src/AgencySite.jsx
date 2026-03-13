@@ -2251,7 +2251,7 @@ function Footer() {
               </a>
             </div>
           </div>
-          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} data-hover style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", width: "36px", height: "36px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.3s" }}
+          <button className="footer-top-btn" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} data-hover style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", width: "36px", height: "36px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.3s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "#e8622c"; e.currentTarget.style.color = "#e8622c"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; }}>↑</button>
         </div>
       </footer>
@@ -2363,6 +2363,7 @@ export default function AgencySite() {
           #top { padding: 120px 20px 60px !important; min-height: auto !important; }
           h2 { font-size: clamp(28px, 8vw, 48px) !important; line-height: 1.15 !important; }
           section[style*="padding: "] { padding-top: clamp(60px, 10vw, 100px) !important; padding-bottom: clamp(60px, 10vw, 100px) !important; }
+          .footer-top-btn { display: none !important; }
         }
       `}</style>
 
