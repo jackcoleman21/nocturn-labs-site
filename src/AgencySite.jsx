@@ -1861,7 +1861,15 @@ function SpaceGallery() {
   const proj = fIdx >= 0 ? PROJECTS[fIdx] : null;
 
   return (
-    <section id="work" ref={containerRef} style={{ height: '500vh', position: 'relative' }}>
+    <section id="work" ref={containerRef} style={{ height: '500vh', position: 'relative', background: '#010108' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '60px 40px 30px', zIndex: 10 }}>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", letterSpacing: "4px", color: "#e8622c", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
+          <span style={{ width: "40px", height: "1px", background: "#e8622c", display: "inline-block" }} /> SELECTED WORK
+        </span>
+        <h2 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(36px, 5vw, 72px)", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400, letterSpacing: "-2px" }}>
+          Projects that<br /><span style={{ fontStyle: "italic" }}>speak for themselves</span>
+        </h2>
+      </div>
       <style>{`
         .sg-canvas{position:sticky;top:0;width:100%;height:100vh;z-index:0;overflow:hidden}
         .sg-ov{position:absolute;inset:0;pointer-events:none}
