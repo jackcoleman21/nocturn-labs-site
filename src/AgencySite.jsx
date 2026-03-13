@@ -833,9 +833,13 @@ function HeroVisual() {
     let pressing = 0, pressTarget = 0;
     const wH = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    // Mobile detection for performance scaling
+    const isMobileDevice = window.innerWidth < 768 || ("ontouchstart" in window && window.innerWidth < 1024);
+    const pixelRatio = isMobileDevice ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobileDevice, alpha: true, powerPreference: isMobileDevice ? "low-power" : "high-performance" });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(pixelRatio);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
@@ -854,17 +858,20 @@ function HeroVisual() {
       uCol3: { value: new THREE.Vector3(...HERO_COLORS.col3) }, uCol4: { value: new THREE.Vector3(...HERO_COLORS.col4) },
     });
 
-    // Main blob
-    const blobGeo = new THREE.IcosahedronGeometry(1.65, 200);
+    // Main blob — lower detail on mobile
+    const blobDetail = isMobileDevice ? 64 : 200;
+    const blobGeo = new THREE.IcosahedronGeometry(1.65, blobDetail);
     const blobMat = new THREE.ShaderMaterial({ vertexShader: BLOB_V2_VERT, fragmentShader: BLOB_V2_FRAG, uniforms: makeBlobUniforms(), side: THREE.DoubleSide });
     const blob = new THREE.Mesh(blobGeo, blobMat);
     scene.add(blob);
 
-    // Satellites
+    // Satellites — fewer on mobile
     const satellites = [];
-    for (let i = 0; i < 5; i++) {
+    const satCount = isMobileDevice ? 2 : 5;
+    for (let i = 0; i < satCount; i++) {
       const r = 0.2 + Math.random() * 0.35;
-      const sGeo = new THREE.IcosahedronGeometry(r, 80);
+      const satDetail = isMobileDevice ? 32 : 80;
+      const sGeo = new THREE.IcosahedronGeometry(r, satDetail);
       const sMat = new THREE.ShaderMaterial({ vertexShader: BLOB_V2_VERT, fragmentShader: BLOB_V2_FRAG, uniforms: makeBlobUniforms(0.8, 1.4, 0.8 + Math.random() * 0.5, 0.15), side: THREE.DoubleSide });
       const sMesh = new THREE.Mesh(sGeo, sMat);
       sMesh.userData = { orbit: 2.8 + Math.random() * 1.7, speed: 0.15 + Math.random() * 0.2, phase: Math.random() * Math.PI * 2, tilt: (Math.random() - 0.5) * 1.2 };
@@ -872,11 +879,13 @@ function HeroVisual() {
       satellites.push(sMesh);
     }
 
-    // Wireframe rings
+    // Wireframe rings — fewer on mobile
     const rings = [];
-    for (let i = 0; i < 3; i++) {
+    const ringCount = isMobileDevice ? 2 : 3;
+    for (let i = 0; i < ringCount; i++) {
       const radius = 2.5 + i * 0.9;
-      const rGeo = new THREE.RingGeometry(radius, radius + 0.003, 128, 1);
+      const ringSegs = isMobileDevice ? 64 : 128;
+      const rGeo = new THREE.RingGeometry(radius, radius + 0.003, ringSegs, 1);
       const rMat = new THREE.ShaderMaterial({ vertexShader: RING_VERT, fragmentShader: RING_FRAG, uniforms: { uTime: { value: 0 }, uIndex: { value: i } }, transparent: true, side: THREE.DoubleSide, depthWrite: false });
       const rMesh = new THREE.Mesh(rGeo, rMat);
       rMesh.rotation.x = Math.PI * 0.35 + i * 0.25; rMesh.rotation.z = i * 0.4;
@@ -884,8 +893,8 @@ function HeroVisual() {
       scene.add(rMesh); rings.push(rMesh);
     }
 
-    // Colored particles
-    const pCount = 4000;
+    // Colored particles — fewer on mobile
+    const pCount = isMobileDevice ? 1000 : 4000;
     const pPos = new Float32Array(pCount * 3), pSizes = new Float32Array(pCount), pSpeeds = new Float32Array(pCount), pPhases = new Float32Array(pCount), pColors = new Float32Array(pCount * 3);
     const palette = [HERO_COLORS.col1, HERO_COLORS.col2, HERO_COLORS.col3, HERO_COLORS.col4, [1,1,1]];
     for (let i = 0; i < pCount; i++) {
@@ -901,7 +910,7 @@ function HeroVisual() {
     pGeo.setAttribute("aSpeed", new THREE.BufferAttribute(pSpeeds, 1));
     pGeo.setAttribute("aPhase", new THREE.BufferAttribute(pPhases, 1));
     pGeo.setAttribute("aColor", new THREE.BufferAttribute(pColors, 3));
-    const pMat = new THREE.ShaderMaterial({ vertexShader: PARTICLE_V2_VERT, fragmentShader: PARTICLE_V2_FRAG, uniforms: { uTime: { value: 0 }, uPR: { value: Math.min(window.devicePixelRatio, 2) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const pMat = new THREE.ShaderMaterial({ vertexShader: PARTICLE_V2_VERT, fragmentShader: PARTICLE_V2_FRAG, uniforms: { uTime: { value: 0 }, uPR: { value: pixelRatio } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const particleSys = new THREE.Points(pGeo, pMat);
     scene.add(particleSys);
 
@@ -973,18 +982,22 @@ function HeroVisual() {
         ring.material.uniforms.uTime.value = t;
       }
       pMat.uniforms.uTime.value = t; particleSys.rotation.y = t * 0.008; particleSys.rotation.x = Math.sin(t * 0.01) * 0.05;
-      // Render pipeline
-      renderer.setRenderTarget(baseRT); renderer.render(scene, camera);
-      brightMat.uniforms.tDiffuse.value = baseRT.texture;
-      renderer.setRenderTarget(brightRT); renderer.render(brightScene, brightCam);
-      for (let i = 0; i < 3; i++) {
-        blurMat.uniforms.tDiffuse.value = (i === 0 ? brightRT : blurRT_B).texture; blurMat.uniforms.uDir.value.set(1, 0);
-        renderer.setRenderTarget(blurRT_A); renderer.render(blurScene, blurCam);
-        blurMat.uniforms.tDiffuse.value = blurRT_A.texture; blurMat.uniforms.uDir.value.set(0, 1);
-        renderer.setRenderTarget(blurRT_B); renderer.render(blurScene, blurCam);
+      // Render pipeline — skip bloom on mobile for performance
+      if (isMobileDevice) {
+        renderer.setRenderTarget(null); renderer.render(scene, camera);
+      } else {
+        renderer.setRenderTarget(baseRT); renderer.render(scene, camera);
+        brightMat.uniforms.tDiffuse.value = baseRT.texture;
+        renderer.setRenderTarget(brightRT); renderer.render(brightScene, brightCam);
+        for (let i = 0; i < 3; i++) {
+          blurMat.uniforms.tDiffuse.value = (i === 0 ? brightRT : blurRT_B).texture; blurMat.uniforms.uDir.value.set(1, 0);
+          renderer.setRenderTarget(blurRT_A); renderer.render(blurScene, blurCam);
+          blurMat.uniforms.tDiffuse.value = blurRT_A.texture; blurMat.uniforms.uDir.value.set(0, 1);
+          renderer.setRenderTarget(blurRT_B); renderer.render(blurScene, blurCam);
+        }
+        compMat.uniforms.tBase.value = baseRT.texture; compMat.uniforms.tBloom.value = blurRT_B.texture; compMat.uniforms.uTime.value = t;
+        renderer.setRenderTarget(null); renderer.render(compScene, compCam);
       }
-      compMat.uniforms.tBase.value = baseRT.texture; compMat.uniforms.tBloom.value = blurRT_B.texture; compMat.uniforms.uTime.value = t;
-      renderer.setRenderTarget(null); renderer.render(compScene, compCam);
     };
     animate();
 
@@ -1662,7 +1675,7 @@ function AboutSection() {
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#e8622c'; e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(232,98,44,0.12)'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.querySelector('img').style.transform = 'scale(1.12)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(10,10,24,0.12)'; e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.querySelector('img').style.transform = 'scale(1)'; }}>
               <img src={client.logo} alt={client.name} style={{ width: "80px", height: "80px", objectFit: "contain", transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }} />
-              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "1.5px", textTransform: "uppercase", whiteSpace: "nowrap" }}>{client.name}</span>
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(11px, 2.5vw, 15px)", fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "1px", textTransform: "uppercase", textAlign: "center", lineHeight: 1.3 }}>{client.name}</span>
             </a>
           ))}
         </div>
@@ -2285,8 +2298,8 @@ export default function AgencySite() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Instrument+Serif:ital@0;1&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body { background: #080812; color: #e8e4df; overflow-x: hidden; }
+        html { scroll-behavior: smooth; overflow-x: hidden; }
+        body { background: #080812; color: #e8e4df; overflow-x: hidden; max-width: 100vw; }
         ::selection { background: #e8622c; color: #fff; }
         .nav-logo-link:hover .nav-logo-icon { transform: rotate(-8deg) scale(1.05) !important; }
         ::-webkit-scrollbar { width: 4px; }
@@ -2323,7 +2336,7 @@ export default function AgencySite() {
           .service-item p { opacity: 1 !important; max-height: none !important; }
         }
         @media (max-width: 767px) {
-          section { padding-left: 20px !important; padding-right: 20px !important; }
+          section { padding-left: 20px !important; padding-right: 20px !important; overflow-x: hidden !important; }
           footer { padding-left: 20px !important; padding-right: 20px !important; }
           .philosophy-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
           .process-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
@@ -2331,11 +2344,13 @@ export default function AgencySite() {
           .project-row-grid > *:nth-child(1) { display: none !important; }
           .project-row-grid > *:nth-child(3) { display: none !important; }
           .project-row-grid > *:nth-child(4) { display: none !important; }
-          .project-row-grid h3 { font-size: 32px !important; }
+          .project-row-grid h3 { font-size: 28px !important; }
           .footer-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
           .faq-layout { padding: 0 !important; }
           .faq-layout > div:first-child { position: static !important; }
-          .client-logos { grid-template-columns: 1fr 1fr !important; }
+          .client-logos { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+          .client-logos a { padding: 24px 12px !important; gap: 12px !important; }
+          .client-logos img { width: 56px !important; height: 56px !important; }
           .services-header { grid-template-columns: 1fr !important; gap: 24px !important; }
           .about-layout { flex-direction: column !important; }
           .about-layout > div:first-child { width: 100% !important; position: static !important; }
@@ -2343,9 +2358,11 @@ export default function AgencySite() {
           .contact-grid { grid-template-columns: 1fr !important; }
           .pricing-grid { grid-template-columns: 1fr !important; }
           .stats-grid { grid-template-columns: 1fr 1fr !important; }
-          .service-item { grid-template-columns: 1fr !important; gap: 12px !important; }
-          .service-item p { opacity: 1 !important; max-height: none !important; }
-          #top { padding: 120px 20px 60px !important; }
+          .service-item { grid-template-columns: 1fr !important; gap: 8px !important; padding: 24px 0 !important; }
+          .service-item p { opacity: 1 !important; max-height: none !important; overflow: visible !important; }
+          #top { padding: 120px 20px 60px !important; min-height: auto !important; }
+          h2 { font-size: clamp(28px, 8vw, 48px) !important; line-height: 1.15 !important; }
+          section[style*="padding: "] { padding-top: clamp(60px, 10vw, 100px) !important; padding-bottom: clamp(60px, 10vw, 100px) !important; }
         }
       `}</style>
 
@@ -2356,7 +2373,7 @@ export default function AgencySite() {
       {!isTouch && <CustomCursor />}
       <BackToTop />
 
-      <div style={{ position: "relative", zIndex: 2 }}>
+      <div style={{ position: "relative", zIndex: 2, overflowX: "hidden", maxWidth: "100vw" }}>
       <SmoothScrollWrapper enabled={false}>
         <Navbar scrolled={scrolled} activeNav={activeNav} />
         <Hero heroReady={heroReady} />
