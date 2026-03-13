@@ -5,10 +5,10 @@ import * as THREE from "three";
 // DATA
 // ═══════════════════════════════════════════
 const PROJECTS = [
-  { id: 1, title: "PRECISION", category: "Web Design", year: "2025", desc: "Premium auto detailing site for Precision Detailing NJ — dark-mode, conversion-driven, built from scratch.", color: "#2d8c4e", image: "/precision-hero.png", url: "https://precisionautodetailnj.com" },
-  { id: 2, title: "CYRATH", category: "Web Application", year: "2025", desc: "Full-stack fantasy football analytics platform with real-time crowdsourced player valuations and trade tools.", color: "#7c6cff", image: "/cyrath-hero.png", url: "https://cyrath.com" },
-  { id: 3, title: "PULSBRUSH", category: "E-Commerce", year: "2025", desc: "Premium DTC Shopify store for the world's first fully automatic sonic toothbrush — 40K vibrations, 30-second clean.", color: "#00e5cc", image: "/pulsbrush-hero.png", url: "https://pulsbrush.com" },
-  { id: 4, title: "DECANTOIR", category: "E-Commerce", year: "2026", desc: "Luxury fragrance decant boutique — authentic niche & designer scents, perfectly portioned for discovery.", color: "#c5a55a", image: "/decantoir-hero.png", url: "https://decantoir.com" },
+  { id: 1, title: "PRECISION", fullTitle: "Precision Auto Detailing", category: "Web Design", year: "2025", desc: "Premium auto detailing site for Precision Detailing NJ — dark-mode, conversion-driven, built from scratch.", color: "#2d8c4e", image: "/precision-hero.png", logo: "/precision-logo.png", url: "https://precisionautodetailnj.com" },
+  { id: 2, title: "CYRATH", fullTitle: "Cyrath", category: "Web Application", year: "2025", desc: "Full-stack fantasy football analytics platform with real-time crowdsourced player valuations and trade tools.", color: "#7c6cff", image: "/cyrath-hero.png", logo: "/cyrath-logo.png", url: "https://cyrath.com" },
+  { id: 3, title: "PULSBRUSH", fullTitle: "PulsBrush", category: "E-Commerce", year: "2025", desc: "Premium DTC Shopify store for the world's first fully automatic sonic toothbrush — 40K vibrations, 30-second clean.", color: "#00e5cc", image: "/pulsbrush-hero.png", logo: "/pulsbrush-logo.png", url: "https://pulsbrush.com" },
+  { id: 4, title: "DECANTOIR", fullTitle: "Decantoir", category: "E-Commerce", year: "2026", desc: "Luxury fragrance decant boutique — authentic niche & designer scents, perfectly portioned for discovery.", color: "#c5a55a", image: "/decantoir-hero.png", logo: "/decantoir-logo.png", url: "https://decantoir.com" },
 ];
 const SERVICES = [
   { num: "01", title: "Custom Website Design", desc: "Bespoke, conversion-optimized sites built from scratch. No templates. No compromises. Every pixel intentional." },
@@ -18,20 +18,20 @@ const SERVICES = [
   { num: "05", title: "Creative Direction", desc: "Strategic visual leadership for launches, campaigns, and digital experiences that demand attention." },
 ];
 const PRICING = [
-  { tier: "STARTER", price: "3,500", desc: "Single-page site with premium design", features: ["Custom Design (1 page)", "Mobile Responsive", "Basic Animations", "SEO Foundation", "2 Revision Rounds", "1-Week Delivery"] },
-  { tier: "PROFESSIONAL", price: "8,500", desc: "Multi-page site with full identity", features: ["Up to 5 Custom Pages", "Brand Identity Package", "Advanced Animations", "CMS Integration", "E-Commerce Ready", "3-Week Delivery"], featured: true },
-  { tier: "ENTERPRISE", price: "20,000+", desc: "Complete digital ecosystem", features: ["Unlimited Pages", "Full Brand System", "Custom Web App / SaaS", "API Integrations", "Ongoing Support", "Timeline TBD"] },
+  { tier: "STARTER", price: "1,500", desc: "Single-page site with premium design", features: ["Custom Design (1 page)", "Mobile Responsive", "Basic Animations", "SEO Foundation", "2 Revision Rounds", "1-Week Delivery"] },
+  { tier: "PROFESSIONAL", price: "3,500", desc: "Multi-page site with full identity", features: ["Up to 5 Custom Pages", "Brand Identity Package", "Advanced Animations", "CMS Integration", "E-Commerce Ready", "3-Week Delivery"], featured: true },
+  { tier: "ENTERPRISE", price: "Contact", desc: "Complete digital ecosystem", features: ["Unlimited Pages", "Full Brand System", "Custom Web App / SaaS", "API Integrations", "Ongoing Support", "Timeline TBD"] },
 ];
 const TESTIMONIALS = [
-  { quote: "They didn't just build us a website — they built us a weapon. Conversions up 340% in the first quarter.", name: "Marcus Chen", role: "CEO, Meridian Wellness" },
-  { quote: "The level of craft is obscene. Every interaction, every transition, every detail — it's like they're designing for a different decade.", name: "Sarah Blackwell", role: "Founder, Vaulted Finance" },
-  { quote: "We've worked with agencies that charge 5x more and deliver half the quality. This team operates on another level entirely.", name: "David Okonkwo", role: "CTO, Phantom Analytics" },
+  { quote: "They didn't just build us a website — they built us a weapon. Conversions up 340% in the first quarter.", name: "Nick Sabatino", role: "CEO, Precision Auto Detailing" },
+  { quote: "The level of craft is obscene. Every interaction, every transition, every detail — it's like they're designing for a different decade.", name: "John Perrone", role: "Co-Owner, Cyrath" },
+  { quote: "We've worked with agencies that charge 5x more and deliver half the quality. This team operates on another level entirely.", name: "Ryan Coleman", role: "Owner, PulsBrush" },
 ];
 const CASE_STUDIES = [
-  { id: 1, title: "Precision Detailing", category: "Web Design", tag: "Automotive", desc: "Premium detailing business site engineered to dominate local search", color: "#2d8c4e", image: "/precision-services.png", challenge: "No online presence — losing high-value clients to competitors with polished websites and SEO.", solution: "Ground-up dark-mode site with conversion-optimized layout, service pages, Google review integration, and local SEO.", results: [{ value: 180, label: "Organic Traffic", prefix: "+", suffix: "%" }, { value: 4.9, label: "Google Rating", suffix: "★" }] },
-  { id: 2, title: "Cyrath", category: "Web Application", tag: "Sports Tech", desc: "Fantasy football analytics platform with 24.8M+ data points", color: "#7c6cff", image: "/cyrath-features.png", challenge: "Fantasy football managers lacked a unified, real-time source for community-driven player valuations across Dynasty, Redraft, and DFS formats.", solution: "Full-stack Next.js platform with live crowdsourced rankings, trade calculator, DFS optimizer, and gamified community engagement.", results: [{ value: 132, label: "Community Leagues", suffix: "K+" }, { value: 24, label: "Data Points", suffix: ".8M+" }] },
-  { id: 3, title: "PulsBrush", category: "E-Commerce", tag: "Consumer Product", desc: "DTC Shopify store for automatic sonic toothbrush with 2,400+ reviews", color: "#00e5cc", image: "/pulsbrush-features.png", challenge: "Launching a novel oral care product in a crowded market dominated by established brands like Sonicare and Oral-B.", solution: "High-converting Shopify store with dark premium aesthetic, social proof integration, and 3-step how-it-works funnel.", results: [{ value: 100, label: "Happy Customers", suffix: "K+" }, { value: 4.8, label: "Average Rating", suffix: "★" }] },
-  { id: 4, title: "Decantoir", category: "E-Commerce", tag: "Luxury Retail", desc: "Boutique fragrance decant store with 100+ authentic scents", color: "#c5a55a", image: "/decantoir-features.png", challenge: "Breaking into the luxury fragrance market where customers hesitate to buy full bottles of expensive niche scents sight-unseen.", solution: "Elegant Shopify boutique with gold-accented minimal design, curated discovery flow, and trust-building authenticity guarantees.", results: [{ value: 100, label: "Fragrances", suffix: "+" }, { value: 4.8, label: "Avg Rating", suffix: "★" }] },
+  { id: 1, title: "Precision Auto Detailing", category: "Web Design", tag: "Automotive", desc: "Premium detailing business site engineered to dominate local search", color: "#2d8c4e", image: "/precision-services.png", logo: "/precision-logo.png", challenge: "No online presence — losing high-value clients to competitors with polished websites and SEO.", solution: "Ground-up dark-mode site with conversion-optimized layout, service pages, Google review integration, and local SEO.", results: [{ value: 180, label: "Organic Traffic", prefix: "+", suffix: "%" }, { value: 4.9, label: "Google Rating", suffix: "★" }] },
+  { id: 2, title: "Cyrath", category: "Web Application", tag: "Sports Tech", desc: "Fantasy football analytics platform with 24.8M+ data points", color: "#7c6cff", image: "/cyrath-features.png", logo: "/cyrath-logo.png", challenge: "Fantasy football managers lacked a unified, real-time source for community-driven player valuations across Dynasty, Redraft, and DFS formats.", solution: "Full-stack Next.js platform with live crowdsourced rankings, trade calculator, DFS optimizer, and gamified community engagement.", results: [{ value: 132, label: "Community Leagues", suffix: "K+" }, { value: 24, label: "Data Points", suffix: ".8M+" }] },
+  { id: 3, title: "PulsBrush", category: "E-Commerce", tag: "Consumer Product", desc: "DTC Shopify store for automatic sonic toothbrush with 2,400+ reviews", color: "#00e5cc", image: "/pulsbrush-features.png", logo: "/pulsbrush-logo.png", challenge: "Launching a novel oral care product in a crowded market dominated by established brands like Sonicare and Oral-B.", solution: "High-converting Shopify store with dark premium aesthetic, social proof integration, and 3-step how-it-works funnel.", results: [{ value: 100, label: "Happy Customers", suffix: "K+" }, { value: 4.8, label: "Average Rating", suffix: "★" }] },
+  { id: 4, title: "Decantoir", category: "E-Commerce", tag: "Luxury Retail", desc: "Boutique fragrance decant store with 100+ authentic scents", color: "#c5a55a", image: "/decantoir-features.png", logo: "/decantoir-logo.png", challenge: "Breaking into the luxury fragrance market where customers hesitate to buy full bottles of expensive niche scents sight-unseen.", solution: "Elegant Shopify boutique with gold-accented minimal design, curated discovery flow, and trust-building authenticity guarantees.", results: [{ value: 100, label: "Fragrances", suffix: "+" }, { value: 4.8, label: "Avg Rating", suffix: "★" }] },
 ];
 
 const IS_TOUCH = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -833,13 +833,9 @@ function HeroVisual() {
     let pressing = 0, pressTarget = 0;
     const wH = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-    // Mobile detection for performance scaling
-    const isMobileDevice = window.innerWidth < 768 || ("ontouchstart" in window && window.innerWidth < 1024);
-    const pixelRatio = isMobileDevice ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: !isMobileDevice, alpha: true, powerPreference: isMobileDevice ? "low-power" : "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(pixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
@@ -858,20 +854,17 @@ function HeroVisual() {
       uCol3: { value: new THREE.Vector3(...HERO_COLORS.col3) }, uCol4: { value: new THREE.Vector3(...HERO_COLORS.col4) },
     });
 
-    // Main blob — lower detail on mobile
-    const blobDetail = isMobileDevice ? 64 : 200;
-    const blobGeo = new THREE.IcosahedronGeometry(1.65, blobDetail);
+    // Main blob
+    const blobGeo = new THREE.IcosahedronGeometry(1.65, 200);
     const blobMat = new THREE.ShaderMaterial({ vertexShader: BLOB_V2_VERT, fragmentShader: BLOB_V2_FRAG, uniforms: makeBlobUniforms(), side: THREE.DoubleSide });
     const blob = new THREE.Mesh(blobGeo, blobMat);
     scene.add(blob);
 
-    // Satellites — fewer on mobile
+    // Satellites
     const satellites = [];
-    const satCount = isMobileDevice ? 2 : 5;
-    for (let i = 0; i < satCount; i++) {
+    for (let i = 0; i < 5; i++) {
       const r = 0.2 + Math.random() * 0.35;
-      const satDetail = isMobileDevice ? 32 : 80;
-      const sGeo = new THREE.IcosahedronGeometry(r, satDetail);
+      const sGeo = new THREE.IcosahedronGeometry(r, 80);
       const sMat = new THREE.ShaderMaterial({ vertexShader: BLOB_V2_VERT, fragmentShader: BLOB_V2_FRAG, uniforms: makeBlobUniforms(0.8, 1.4, 0.8 + Math.random() * 0.5, 0.15), side: THREE.DoubleSide });
       const sMesh = new THREE.Mesh(sGeo, sMat);
       sMesh.userData = { orbit: 2.8 + Math.random() * 1.7, speed: 0.15 + Math.random() * 0.2, phase: Math.random() * Math.PI * 2, tilt: (Math.random() - 0.5) * 1.2 };
@@ -879,13 +872,11 @@ function HeroVisual() {
       satellites.push(sMesh);
     }
 
-    // Wireframe rings — fewer on mobile
+    // Wireframe rings
     const rings = [];
-    const ringCount = isMobileDevice ? 2 : 3;
-    for (let i = 0; i < ringCount; i++) {
+    for (let i = 0; i < 3; i++) {
       const radius = 2.5 + i * 0.9;
-      const ringSegs = isMobileDevice ? 64 : 128;
-      const rGeo = new THREE.RingGeometry(radius, radius + 0.003, ringSegs, 1);
+      const rGeo = new THREE.RingGeometry(radius, radius + 0.003, 128, 1);
       const rMat = new THREE.ShaderMaterial({ vertexShader: RING_VERT, fragmentShader: RING_FRAG, uniforms: { uTime: { value: 0 }, uIndex: { value: i } }, transparent: true, side: THREE.DoubleSide, depthWrite: false });
       const rMesh = new THREE.Mesh(rGeo, rMat);
       rMesh.rotation.x = Math.PI * 0.35 + i * 0.25; rMesh.rotation.z = i * 0.4;
@@ -893,8 +884,8 @@ function HeroVisual() {
       scene.add(rMesh); rings.push(rMesh);
     }
 
-    // Colored particles — fewer on mobile
-    const pCount = isMobileDevice ? 1000 : 4000;
+    // Colored particles
+    const pCount = 4000;
     const pPos = new Float32Array(pCount * 3), pSizes = new Float32Array(pCount), pSpeeds = new Float32Array(pCount), pPhases = new Float32Array(pCount), pColors = new Float32Array(pCount * 3);
     const palette = [HERO_COLORS.col1, HERO_COLORS.col2, HERO_COLORS.col3, HERO_COLORS.col4, [1,1,1]];
     for (let i = 0; i < pCount; i++) {
@@ -910,7 +901,7 @@ function HeroVisual() {
     pGeo.setAttribute("aSpeed", new THREE.BufferAttribute(pSpeeds, 1));
     pGeo.setAttribute("aPhase", new THREE.BufferAttribute(pPhases, 1));
     pGeo.setAttribute("aColor", new THREE.BufferAttribute(pColors, 3));
-    const pMat = new THREE.ShaderMaterial({ vertexShader: PARTICLE_V2_VERT, fragmentShader: PARTICLE_V2_FRAG, uniforms: { uTime: { value: 0 }, uPR: { value: pixelRatio } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const pMat = new THREE.ShaderMaterial({ vertexShader: PARTICLE_V2_VERT, fragmentShader: PARTICLE_V2_FRAG, uniforms: { uTime: { value: 0 }, uPR: { value: Math.min(window.devicePixelRatio, 2) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const particleSys = new THREE.Points(pGeo, pMat);
     scene.add(particleSys);
 
@@ -982,22 +973,18 @@ function HeroVisual() {
         ring.material.uniforms.uTime.value = t;
       }
       pMat.uniforms.uTime.value = t; particleSys.rotation.y = t * 0.008; particleSys.rotation.x = Math.sin(t * 0.01) * 0.05;
-      // Render pipeline — skip bloom on mobile for performance
-      if (isMobileDevice) {
-        renderer.setRenderTarget(null); renderer.render(scene, camera);
-      } else {
-        renderer.setRenderTarget(baseRT); renderer.render(scene, camera);
-        brightMat.uniforms.tDiffuse.value = baseRT.texture;
-        renderer.setRenderTarget(brightRT); renderer.render(brightScene, brightCam);
-        for (let i = 0; i < 3; i++) {
-          blurMat.uniforms.tDiffuse.value = (i === 0 ? brightRT : blurRT_B).texture; blurMat.uniforms.uDir.value.set(1, 0);
-          renderer.setRenderTarget(blurRT_A); renderer.render(blurScene, blurCam);
-          blurMat.uniforms.tDiffuse.value = blurRT_A.texture; blurMat.uniforms.uDir.value.set(0, 1);
-          renderer.setRenderTarget(blurRT_B); renderer.render(blurScene, blurCam);
-        }
-        compMat.uniforms.tBase.value = baseRT.texture; compMat.uniforms.tBloom.value = blurRT_B.texture; compMat.uniforms.uTime.value = t;
-        renderer.setRenderTarget(null); renderer.render(compScene, compCam);
+      // Render pipeline
+      renderer.setRenderTarget(baseRT); renderer.render(scene, camera);
+      brightMat.uniforms.tDiffuse.value = baseRT.texture;
+      renderer.setRenderTarget(brightRT); renderer.render(brightScene, brightCam);
+      for (let i = 0; i < 3; i++) {
+        blurMat.uniforms.tDiffuse.value = (i === 0 ? brightRT : blurRT_B).texture; blurMat.uniforms.uDir.value.set(1, 0);
+        renderer.setRenderTarget(blurRT_A); renderer.render(blurScene, blurCam);
+        blurMat.uniforms.tDiffuse.value = blurRT_A.texture; blurMat.uniforms.uDir.value.set(0, 1);
+        renderer.setRenderTarget(blurRT_B); renderer.render(blurScene, blurCam);
       }
+      compMat.uniforms.tBase.value = baseRT.texture; compMat.uniforms.tBloom.value = blurRT_B.texture; compMat.uniforms.uTime.value = t;
+      renderer.setRenderTarget(null); renderer.render(compScene, compCam);
     };
     animate();
 
@@ -1182,11 +1169,7 @@ function PhilosophyStrip() {
     { num: "03", headline: "Your site never sleeps.", body: "Your website is your highest-leverage employee. It works 24/7 and talks to every customer you'll ever have. We make sure it closes." },
   ];
   return (
-    <section ref={sectionRef} style={{ background: "#0a0a1a", padding: "clamp(80px, 10vw, 140px) 40px", position: "relative", overflow: "hidden" }}>
-      {/* Ambient effects */}
-      <div style={{ position: "absolute", top: "-10%", left: "5%", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, rgba(232,98,44,0.06) 0%, transparent 70%)", filter: "blur(60px)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: "-10%", right: "15%", width: "300px", height: "300px", borderRadius: "50%", background: "radial-gradient(circle, rgba(240,148,58,0.04) 0%, transparent 70%)", filter: "blur(50px)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px)", backgroundSize: "80px 80px", pointerEvents: "none" }} />
+    <section ref={sectionRef} style={{ padding: "clamp(80px, 10vw, 140px) 40px", position: "relative", overflow: "hidden" }}>
 
       <div style={{ maxWidth: "1400px", margin: "0 auto", position: "relative", zIndex: 1 }}>
         {/* Section header */}
@@ -1208,7 +1191,7 @@ function PhilosophyStrip() {
             return (
               <div key={i} style={{ padding: "clamp(24px, 3vw, 48px)", position: "relative", borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
                 {/* Number */}
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(48px, 6vw, 72px)", fontWeight: 800, letterSpacing: "-2px", lineHeight: 1, display: "block", marginBottom: "24px", background: `linear-gradient(180deg, rgba(255,255,255,${0.15 + colProgress * 0.15}) 0%, rgba(232,98,44,${0.1 + colProgress * 0.3}) 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", transition: "all 0.5s ease" }}>{b.num}</span>
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(48px, 6vw, 72px)", fontWeight: 800, letterSpacing: "-2px", lineHeight: 1, display: "inline-block", marginBottom: "24px", backgroundImage: `linear-gradient(180deg, rgba(255,255,255,${0.35 + colProgress * 0.25}) 0%, rgba(232,98,44,${0.35 + colProgress * 0.45}) 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" }}>{b.num}</span>
                 {/* Headline */}
                 <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(22px, 2.5vw, 32px)", color: `rgba(255,255,255,${0.6 + colProgress * 0.35})`, margin: "0 0 16px", fontWeight: 400, lineHeight: 1.2, transition: "color 0.5s ease", letterSpacing: "-0.5px" }}>{b.headline}</h3>
                 {/* Divider */}
@@ -1231,7 +1214,7 @@ function PortfolioCard({ project }) {
       style={{ width: "55vw", minWidth: "55vw", height: "75vh", position: "relative", border: hovered ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.04)", overflow: "hidden", cursor: "pointer", flexShrink: 0, transition: "border-color 0.4s" }}
       onClick={() => project.url && window.open(project.url, "_blank")}>
       {project.image ? (
-        <div style={{ position: "absolute", inset: "-5%", width: "110%", height: "110%", backgroundImage: `url(${project.image})`, backgroundSize: "cover", backgroundPosition: "center", filter: hovered ? "brightness(0.6) scale(1.05)" : "brightness(0.45)", transition: "all 0.6s cubic-bezier(0.16, 1, 0.3, 1)" }} />
+        <div style={{ position: "absolute", inset: "-5%", width: "110%", height: "110%", backgroundImage: `url(${project.image})`, backgroundSize: "cover", backgroundPosition: "center", filter: hovered ? "brightness(0.8) scale(1.05)" : "brightness(0.65)", transition: "all 0.6s cubic-bezier(0.16, 1, 0.3, 1)" }} />
       ) : (
         <div style={{ position: "absolute", inset: "-5%", width: "110%", height: "110%", background: `linear-gradient(135deg, ${project.color}22 0%, ${project.color}08 50%, #b5afa8 100%)` }} />
       )}
@@ -1242,9 +1225,13 @@ function PortfolioCard({ project }) {
         <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "12px", letterSpacing: "3px", color: project.image ? "#fff" : project.color, textTransform: "uppercase", border: project.image ? "1px solid rgba(255,255,255,0.5)" : `1px solid ${project.color}60`, padding: "12px 28px", display: "inline-block", background: project.image ? "rgba(0,0,0,0.5)" : "transparent", backdropFilter: "blur(8px)", fontWeight: 600 }}>{project.url ? "VISIT SITE →" : "VIEW PROJECT →"}</span>
       </div>
       <div style={{ position: "absolute", bottom: "40px", left: "40px", right: "40px", zIndex: 2 }}>
-        <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(32px, 4vw, 48px)", color: project.image ? "#ffffff" : "#0a0a18", margin: 0, fontWeight: 400, letterSpacing: "-2px", transform: hovered ? "translateY(-8px)" : "translateY(0)", transition: "transform 0.4s ease", textShadow: project.image ? "0 2px 20px rgba(0,0,0,0.5)" : "none", lineHeight: 1.1 }}>
-          {project.title}<span style={{ color: project.image ? "rgba(255,255,255,0.8)" : project.color }}>.</span>
-        </h3>
+        {project.logo ? (
+          <img src={project.logo} alt={project.title} style={{ maxHeight: "60px", maxWidth: "280px", objectFit: "contain", filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.5))", transform: hovered ? "translateY(-8px)" : "translateY(0)", transition: "transform 0.4s ease" }} />
+        ) : (
+          <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(32px, 4vw, 48px)", color: "#ffffff", margin: 0, fontWeight: 400, letterSpacing: "-2px", transform: hovered ? "translateY(-8px)" : "translateY(0)", transition: "transform 0.4s ease", textShadow: "0 2px 20px rgba(0,0,0,0.5)", lineHeight: 1.1 }}>
+            {project.title}<span style={{ color: "rgba(255,255,255,0.8)" }}>.</span>
+          </h3>
+        )}
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: project.image ? "rgba(255,255,255,0.95)" : "#0a0a18", maxWidth: "450px", margin: "12px 0 0", opacity: hovered ? 1 : 0, transform: hovered ? "translateY(0)" : "translateY(10px)", transition: "all 0.4s ease 0.05s", lineHeight: 1.6, textShadow: project.image ? "0 1px 8px rgba(0,0,0,0.5)" : "none" }}>{project.desc}</p>
       </div>
     </div>
@@ -1370,9 +1357,14 @@ function ProjectRow({ project, index, onHover }) {
       <div className="project-row-grid" style={{ display: "grid", gridTemplateColumns: "80px 1fr 300px 100px", alignItems: "center", gap: "40px", padding: "0 40px" }}>
         <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", color: "rgba(255,255,255,0.9)", letterSpacing: "1px" }}>{project.year}</span>
         <div>
-          <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: hovered ? "52px" : "48px", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400, letterSpacing: "-2px", transition: "all 0.4s", transform: hovered ? "translateX(20px)" : "translateX(0)" }}>
-            {project.title}<span style={{ color: project.color, opacity: hovered ? 1 : 0, transition: "opacity 0.3s", marginLeft: "12px" }}>.</span>
-          </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", transition: "all 0.4s", transform: hovered ? "translateX(20px)" : "translateX(0)" }}>
+            {project.logo && (
+              <img src={project.logo} alt={project.title} style={{ height: "40px", objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))" }} />
+            )}
+            <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: hovered ? "52px" : "48px", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400, letterSpacing: "-2px", transition: "font-size 0.4s" }}>
+              {project.fullTitle || project.title}<span style={{ color: project.color, opacity: hovered ? 1 : 0, transition: "opacity 0.3s", marginLeft: "4px" }}>.</span>
+            </h3>
+          </div>
         </div>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.9)", lineHeight: 1.6, margin: 0, opacity: hovered ? 0.8 : 0.4, transition: "opacity 0.3s" }}>{project.desc}</p>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -1468,7 +1460,10 @@ function CaseStudyCard({ study }) {
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", letterSpacing: "2px", color: study.color, textTransform: "uppercase", padding: "4px 10px", border: `1px solid ${study.color}40` }}>{study.category}</span>
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "rgba(255,255,255,0.9)", textTransform: "uppercase", padding: "4px 10px", border: "1px solid rgba(255,255,255,0.12)" }}>{study.tag}</span>
         </div>
-        <h4 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "24px", color: "rgba(255,255,255,0.9)", margin: "0 0 8px", fontWeight: 400 }}>{study.title}</h4>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "0 0 8px" }}>
+          {study.logo && <img src={study.logo} alt={study.title} style={{ height: "24px", objectFit: "contain", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.3))" }} />}
+          <h4 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "24px", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400 }}>{study.title}</h4>
+        </div>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.9)", margin: "0 0 24px", lineHeight: 1.5 }}>{study.desc}</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
           <div>
@@ -1549,12 +1544,7 @@ function AwardsMarquee() {
   }, [vis]);
 
   return (
-    <section ref={ref} style={{ padding: "clamp(100px, 12vw, 180px) 40px", background: "#0a0a1a", position: "relative", overflow: "hidden" }}>
-      {/* Ambient glow */}
-      <div style={{ position: "absolute", top: "-20%", left: "10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(232,98,44,0.08) 0%, transparent 70%)", filter: "blur(60px)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: "-20%", right: "10%", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, rgba(240,148,58,0.05) 0%, transparent 70%)", filter: "blur(60px)", pointerEvents: "none" }} />
-      {/* Grid pattern */}
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)", backgroundSize: "80px 80px", pointerEvents: "none" }} />
+    <section ref={ref} style={{ padding: "clamp(100px, 12vw, 180px) 40px", position: "relative", overflow: "hidden" }}>
       <div className="stats-grid" style={{ maxWidth: "1300px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0", position: "relative", zIndex: 1 }}>
         {stats.map((s, i) => (
           <div key={s.label} style={{ textAlign: "center", position: "relative", padding: "clamp(24px, 4vw, 48px) 0", opacity: vis ? 1 : 0, transform: vis ? "translateY(0) scale(1)" : "translateY(30px) scale(0.95)", transition: `all 0.9s cubic-bezier(0.16, 1, 0.3, 1) ${0.1 + i * 0.12}s` }}>
@@ -1671,9 +1661,9 @@ function AboutSection() {
             { name: "Decantoir", logo: "/decantoir-logo.png", url: "https://decantoir.com" },
           ].map((client, i) => (
             <a key={client.name} href={client.url} target="_blank" rel="noopener noreferrer" data-hover
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px", textDecoration: "none", padding: "48px 24px", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(10,10,24,0.12)", borderRadius: "8px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", opacity: proofVis ? 1 : 0, transform: proofVis ? "translateY(0)" : "translateY(15px)", transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${0.3 + i * 0.1}s` }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#e8622c'; e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(232,98,44,0.12)'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.querySelector('img').style.transform = 'scale(1.12)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(10,10,24,0.12)'; e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.querySelector('img').style.transform = 'scale(1)'; }}>
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px", textDecoration: "none", padding: "48px 24px", background: "transparent", border: "1px solid transparent", borderRadius: "8px", opacity: proofVis ? 1 : 0, transform: proofVis ? "translateY(0)" : "translateY(15px)", transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${0.3 + i * 0.1}s` }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(232,98,44,0.4)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(232,98,44,0.25)'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.querySelector('img').style.transform = 'scale(1.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.querySelector('img').style.transform = 'scale(1)'; }}>
               <img src={client.logo} alt={client.name} style={{ width: "80px", height: "80px", objectFit: "contain", transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(11px, 2.5vw, 15px)", fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "1px", textTransform: "uppercase", textAlign: "center", lineHeight: 1.3 }}>{client.name}</span>
             </a>
@@ -1710,7 +1700,7 @@ function ServiceItem({ service, index, activeService, setActiveService }) {
       style={{ opacity: vis ? 1 : 0, transform: vis ? "translateX(0)" : "translateX(-40px)", transition: `all 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.08}s`, borderTop: "1px solid rgba(255,255,255,0.08)", padding: "40px 0", cursor: "pointer", display: "grid", gridTemplateColumns: "60px 1fr 1fr", gap: "40px", alignItems: "start" }}>
       <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", color: isActive ? "#e8622c" : "rgba(255,255,255,0.4)", transition: "color 0.3s", letterSpacing: "1px" }}>{service.num}</span>
       <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "36px", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400, letterSpacing: "-1px", transform: isActive ? "translateX(16px)" : "translateX(0)", transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>{service.title}</h3>
-      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", color: "rgba(255,255,255,0.9)", lineHeight: 1.7, margin: 0, opacity: isActive ? 1 : 0.5, transition: "opacity 0.3s", maxHeight: isActive ? "200px" : "50px", overflow: "hidden" }}>{service.desc}</p>
+      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", color: "rgba(255,255,255,0.9)", lineHeight: 1.7, margin: 0, opacity: isActive ? 1 : 0.85, transition: "opacity 0.3s", maxHeight: isActive ? "200px" : "50px", overflow: "hidden" }}>{service.desc}</p>
     </div>
   );
 }
@@ -1849,8 +1839,8 @@ function WhyUs() {
             <div key={i} ref={el => blockRefs.current[i] = el} style={{ minHeight: "70vh", display: "flex", alignItems: "center", padding: "40px 0" }}>
               <div>
                 {isMobile && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", color: "#e8622c", letterSpacing: "2px", display: "block", marginBottom: "12px" }}>{b.num} —</span>}
-                <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "32px", color: activeBlock === i ? "#0a0a18" : "rgba(255,255,255,0.4)", margin: "0 0 20px", fontWeight: 400, transition: "color 0.5s" }}>{b.title}</h3>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px", color: activeBlock === i ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.4)", lineHeight: 1.8, margin: 0, maxWidth: "500px", transition: "color 0.5s" }}>{b.body}</p>
+                <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "32px", color: activeBlock === i ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.3)", margin: "0 0 20px", fontWeight: 400, transition: "color 0.5s" }}>{b.title}</h3>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px", color: activeBlock === i ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)", lineHeight: 1.8, margin: 0, maxWidth: "500px", transition: "color 0.5s" }}>{b.body}</p>
               </div>
             </div>
           ))}
@@ -1892,7 +1882,7 @@ function Testimonials() {
         </AnimatedText>
 
         {/* Big quote mark */}
-        <div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "160px", color: "rgba(232,98,44,0.08)", lineHeight: 0.5, marginBottom: "20px", userSelect: "none" }}>“</div>
+        <div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "160px", color: "rgba(232,98,44,0.25)", lineHeight: 0.5, marginBottom: "20px", userSelect: "none" }}>“</div>
 
         {/* Quote carousel */}
         <div style={{ position: "relative", minHeight: "220px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1965,8 +1955,8 @@ function PricingCard({ plan, index }) {
         {plan.featured && <div style={{ position: "absolute", top: "16px", right: "16px", fontFamily: "'DM Sans', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#ffffff", background: "#e8622c", padding: "4px 12px", textTransform: "uppercase", fontWeight: 600 }}>POPULAR</div>}
         <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "12px", letterSpacing: "3px", color: "rgba(255,255,255,0.9)", textTransform: "uppercase", marginBottom: "24px" }}>{plan.tier}</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "8px" }}>
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px", color: "rgba(255,255,255,0.9)", fontWeight: 300 }}>$</span>
-          <span style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "56px", color: "rgba(255,255,255,0.9)", fontWeight: 400, letterSpacing: "-2px" }}>{plan.price}</span>
+          {plan.price !== "Contact" && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px", color: "rgba(255,255,255,0.9)", fontWeight: 300 }}>$</span>}
+          <span style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: plan.price === "Contact" ? "40px" : "56px", color: "rgba(255,255,255,0.9)", fontWeight: 400, letterSpacing: "-2px" }}>{plan.price === "Contact" ? "Contact Us" : plan.price}</span>
         </div>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.9)", margin: "0 0 36px", lineHeight: 1.5 }}>{plan.desc}</p>
         <div style={{ width: "100%", height: "1px", background: "rgba(255,255,255,0.06)", marginBottom: "28px" }} />
@@ -2119,7 +2109,7 @@ function Contact() {
                 </div>
 
                 {/* Consultation CTA */}
-                <div style={{ marginTop: "48px", padding: "28px", background: "rgba(232,98,44,0.03)", border: "1px solid rgba(232,98,44,0.08)" }}>
+                <div style={{ marginTop: "48px", padding: "28px", background: "rgba(232,98,44,0.03)", border: "1px solid rgba(232,98,44,0.25)" }}>
                   <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.9)", margin: "0 0 16px", lineHeight: 1.6 }}>Rather hop on a quick call?</p>
                   <MagneticButton data-hover-cta onClick={() => {}} style={{ padding: "12px 24px", background: "transparent", border: "1px solid rgba(232,98,44,0.3)", color: "#e8622c", fontFamily: "'DM Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", transition: "all 0.3s" }}>
                     Book a Free 15-Min Call →
@@ -2298,7 +2288,7 @@ export default function AgencySite() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Instrument+Serif:ital@0;1&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; overflow-x: hidden; }
+        html { scroll-behavior: smooth; }
         body { background: #080812; color: #e8e4df; overflow-x: hidden; max-width: 100vw; }
         ::selection { background: #e8622c; color: #fff; }
         .nav-logo-link:hover .nav-logo-icon { transform: rotate(-8deg) scale(1.05) !important; }
@@ -2336,7 +2326,8 @@ export default function AgencySite() {
           .service-item p { opacity: 1 !important; max-height: none !important; }
         }
         @media (max-width: 767px) {
-          section { padding-left: 20px !important; padding-right: 20px !important; overflow-x: hidden !important; }
+          section:not(#work) { padding-left: 20px !important; padding-right: 20px !important; overflow-x: hidden !important; }
+          section#work { padding-left: 0 !important; padding-right: 0 !important; }
           footer { padding-left: 20px !important; padding-right: 20px !important; }
           .philosophy-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
           .process-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
@@ -2374,7 +2365,7 @@ export default function AgencySite() {
       {!isTouch && <CustomCursor />}
       <BackToTop />
 
-      <div style={{ position: "relative", zIndex: 2, overflowX: "hidden", maxWidth: "100vw" }}>
+      <div style={{ position: "relative", zIndex: 2, maxWidth: "100vw" }}>
       <SmoothScrollWrapper enabled={false}>
         <Navbar scrolled={scrolled} activeNav={activeNav} />
         <Hero heroReady={heroReady} />
