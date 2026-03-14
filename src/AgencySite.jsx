@@ -1910,7 +1910,7 @@ function SpaceGallery() {
         }
       `}</style>
 
-      <div className="sg-canvas" style={{ position: 'relative' }}>
+      <div className="sg-canvas">
         <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
 
         {/* Overlays */}
