@@ -5,10 +5,10 @@ import * as THREE from "three";
 // DATA
 // ═══════════════════════════════════════════
 const PROJECTS = [
-  { id: 1, title: "PRECISION", fullTitle: "Precision Auto Detailing", category: "Web Design", year: "2025", desc: "Premium auto detailing site for Precision Detailing NJ — dark-mode, conversion-driven, built from scratch.", color: "#2d8c4e", image: "/precision-hero.png", logo: "/precision-logo.png", url: "https://precisionautodetailnj.com" },
-  { id: 2, title: "CYRATH", fullTitle: "Cyrath", category: "Web Application", year: "2025", desc: "Full-stack fantasy football analytics platform with real-time crowdsourced player valuations and trade tools.", color: "#7c6cff", image: "/cyrath-hero.png", logo: "/cyrath-logo.png", url: "https://cyrath.com" },
-  { id: 3, title: "PULSBRUSH", fullTitle: "PulsBrush", category: "E-Commerce", year: "2025", desc: "Premium DTC Shopify store for the world's first fully automatic sonic toothbrush — 40K vibrations, 30-second clean.", color: "#00e5cc", image: "/pulsbrush-hero.png", logo: "/pulsbrush-logo.png", url: "https://pulsbrush.com" },
-  { id: 4, title: "DECANTOIR", fullTitle: "Decantoir", category: "E-Commerce", year: "2026", desc: "Luxury fragrance decant boutique — authentic niche & designer scents, perfectly portioned for discovery.", color: "#c5a55a", image: "/decantoir-hero.png", logo: "/decantoir-logo.png", url: "https://decantoir.com" },
+  { id: 1, title: "PRECISION", fullTitle: "Precision Auto Detailing", category: "Web Design", year: "2025", desc: "Premium auto detailing site for Precision Detailing NJ — dark-mode, conversion-driven, built from scratch.", color: "#2d8c4e", image: "/precision-hero.webp", logo: "/precision-logo.webp", url: "https://precisionautodetailnj.com" },
+  { id: 2, title: "CYRATH", fullTitle: "Cyrath", category: "Web Application", year: "2025", desc: "Full-stack fantasy football analytics platform with real-time crowdsourced player valuations and trade tools.", color: "#7c6cff", image: "/cyrath-hero.webp", logo: "/cyrath-logo.webp", url: "https://cyrath.com" },
+  { id: 3, title: "PULSBRUSH", fullTitle: "PulsBrush", category: "E-Commerce", year: "2025", desc: "Premium DTC Shopify store for the world's first fully automatic sonic toothbrush — 40K vibrations, 30-second clean.", color: "#00e5cc", image: "/pulsbrush-hero.webp", logo: "/pulsbrush-logo.webp", url: "https://pulsbrush.com" },
+  { id: 4, title: "DECANTOIR", fullTitle: "Decantoir", category: "E-Commerce", year: "2026", desc: "Luxury fragrance decant boutique — authentic niche & designer scents, perfectly portioned for discovery.", color: "#c5a55a", image: "/decantoir-hero.webp", logo: "/decantoir-logo.webp", url: "https://decantoir.com" },
 ];
 const SERVICES = [
   { num: "01", title: "Custom Website Design", desc: "Bespoke, conversion-optimized sites built from scratch. No templates. No compromises. Every pixel intentional." },
@@ -28,10 +28,10 @@ const TESTIMONIALS = [
   { quote: "We've worked with agencies that charge 5x more and deliver half the quality. This team operates on another level entirely.", name: "Ryan Coleman", role: "Owner, PulsBrush" },
 ];
 const CASE_STUDIES = [
-  { id: 1, title: "Precision Auto Detailing", category: "Web Design", tag: "Automotive", desc: "Premium detailing business site engineered to dominate local search", color: "#2d8c4e", image: "/precision-services.png", logo: "/precision-logo.png", challenge: "No online presence — losing high-value clients to competitors with polished websites and SEO.", solution: "Ground-up dark-mode site with conversion-optimized layout, service pages, Google review integration, and local SEO.", results: [{ value: 180, label: "Organic Traffic", prefix: "+", suffix: "%" }, { value: 4.9, label: "Google Rating", suffix: "★" }] },
-  { id: 2, title: "Cyrath", category: "Web Application", tag: "Sports Tech", desc: "Fantasy football analytics platform with 24.8M+ data points", color: "#7c6cff", image: "/cyrath-features.png", logo: "/cyrath-logo.png", challenge: "Fantasy football managers lacked a unified, real-time source for community-driven player valuations across Dynasty, Redraft, and DFS formats.", solution: "Full-stack Next.js platform with live crowdsourced rankings, trade calculator, DFS optimizer, and gamified community engagement.", results: [{ value: 132, label: "Community Leagues", suffix: "K+" }, { value: 24, label: "Data Points", suffix: ".8M+" }] },
-  { id: 3, title: "PulsBrush", category: "E-Commerce", tag: "Consumer Product", desc: "DTC Shopify store for automatic sonic toothbrush with 2,400+ reviews", color: "#00e5cc", image: "/pulsbrush-features.png", logo: "/pulsbrush-logo.png", challenge: "Launching a novel oral care product in a crowded market dominated by established brands like Sonicare and Oral-B.", solution: "High-converting Shopify store with dark premium aesthetic, social proof integration, and 3-step how-it-works funnel.", results: [{ value: 100, label: "Happy Customers", suffix: "K+" }, { value: 4.8, label: "Average Rating", suffix: "★" }] },
-  { id: 4, title: "Decantoir", category: "E-Commerce", tag: "Luxury Retail", desc: "Boutique fragrance decant store with 100+ authentic scents", color: "#c5a55a", image: "/decantoir-features.png", logo: "/decantoir-logo.png", challenge: "Breaking into the luxury fragrance market where customers hesitate to buy full bottles of expensive niche scents sight-unseen.", solution: "Elegant Shopify boutique with gold-accented minimal design, curated discovery flow, and trust-building authenticity guarantees.", results: [{ value: 100, label: "Fragrances", suffix: "+" }, { value: 4.8, label: "Avg Rating", suffix: "★" }] },
+  { id: 1, title: "Precision Auto Detailing", category: "Web Design", tag: "Automotive", desc: "Premium detailing business site engineered to dominate local search", color: "#2d8c4e", image: "/precision-services.webp", logo: "/precision-logo.webp", challenge: "No online presence — losing high-value clients to competitors with polished websites and SEO.", solution: "Ground-up dark-mode site with conversion-optimized layout, service pages, Google review integration, and local SEO.", results: [{ value: 180, label: "Organic Traffic", prefix: "+", suffix: "%" }, { value: 4.9, label: "Google Rating", suffix: "★" }] },
+  { id: 2, title: "Cyrath", category: "Web Application", tag: "Sports Tech", desc: "Fantasy football analytics platform with 24.8M+ data points", color: "#7c6cff", image: "/cyrath-features.webp", logo: "/cyrath-logo.webp", challenge: "Fantasy football managers lacked a unified, real-time source for community-driven player valuations across Dynasty, Redraft, and DFS formats.", solution: "Full-stack Next.js platform with live crowdsourced rankings, trade calculator, DFS optimizer, and gamified community engagement.", results: [{ value: 132, label: "Community Leagues", suffix: "K+" }, { value: 24, label: "Data Points", suffix: ".8M+" }] },
+  { id: 3, title: "PulsBrush", category: "E-Commerce", tag: "Consumer Product", desc: "DTC Shopify store for automatic sonic toothbrush with 2,400+ reviews", color: "#00e5cc", image: "/pulsbrush-features.webp", logo: "/pulsbrush-logo.webp", challenge: "Launching a novel oral care product in a crowded market dominated by established brands like Sonicare and Oral-B.", solution: "High-converting Shopify store with dark premium aesthetic, social proof integration, and 3-step how-it-works funnel.", results: [{ value: 100, label: "Happy Customers", suffix: "K+" }, { value: 4.8, label: "Average Rating", suffix: "★" }] },
+  { id: 4, title: "Decantoir", category: "E-Commerce", tag: "Luxury Retail", desc: "Boutique fragrance decant store with 100+ authentic scents", color: "#c5a55a", image: "/decantoir-features.webp", logo: "/decantoir-logo.webp", challenge: "Breaking into the luxury fragrance market where customers hesitate to buy full bottles of expensive niche scents sight-unseen.", solution: "Elegant Shopify boutique with gold-accented minimal design, curated discovery flow, and trust-building authenticity guarantees.", results: [{ value: 100, label: "Fragrances", suffix: "+" }, { value: 4.8, label: "Avg Rating", suffix: "★" }] },
 ];
 
 const IS_TOUCH = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -167,14 +167,14 @@ function GrainOverlay() {
 function ScrollProgressBar() {
   const [width, setWidth] = useState(0);
   useEffect(() => {
-    let raf;
     const update = () => {
       const docH = document.documentElement.scrollHeight - window.innerHeight;
       setWidth(docH > 0 ? (window.scrollY / docH) * 100 : 0);
-      raf = requestAnimationFrame(update);
     };
-    raf = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(raf);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    return () => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update); };
   }, []);
   return (
     <>
@@ -464,8 +464,16 @@ fc=vec4(c*v,1);}`;
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("touchmove", onTouch, { passive: true });
 
+    let fluidVisible = true;
+    const fluidObs = new IntersectionObserver(([entry]) => {
+      fluidVisible = entry.isIntersecting;
+      if (fluidVisible && !animId) animate();
+    }, { rootMargin: '100px' });
+    fluidObs.observe(canvas);
+
     let lastTime = performance.now();
     const animate = () => {
+      if (!fluidVisible) { animId = null; return; }
       animId = requestAnimationFrame(animate);
       const now = performance.now();
       const dt = Math.min((now - lastTime) / 1000, 0.016);
@@ -488,7 +496,9 @@ fc=vec4(c*v,1);}`;
     window.addEventListener("resize", onResize);
 
     return () => {
+      fluidVisible = false;
       cancelAnimationFrame(animId);
+      fluidObs.disconnect();
       clearInterval(ambientInterval);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("touchmove", onTouch);
@@ -535,7 +545,7 @@ function LoadingOverlay({ onComplete }) {
       <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "32px" }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: "14px", opacity: pct > 15 ? 1 : 0, transform: pct > 15 ? "translateY(0) scale(1)" : "translateY(10px) scale(0.95)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}>
-          <img src="/nocturn-logo.png" alt="Nocturn Labs" style={{ width: "48px", height: "48px", objectFit: "contain", filter: pct >= 100 ? "drop-shadow(0 0 16px rgba(240,148,58,0.5))" : "drop-shadow(0 0 8px rgba(240,148,58,0.25))", transition: "filter 0.6s ease" }} />
+          <img src="/nocturn-logo.webp" alt="Nocturn Labs" style={{ width: "48px", height: "48px", objectFit: "contain", filter: pct >= 100 ? "drop-shadow(0 0 16px rgba(240,148,58,0.5))" : "drop-shadow(0 0 8px rgba(240,148,58,0.25))", transition: "filter 0.6s ease" }} />
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "24px", fontWeight: 800, color: "#fff", letterSpacing: "0.5px" }}>Nocturn Labs</span>
         </div>
         {/* Progress bar */}
@@ -645,7 +655,7 @@ function Navbar({ scrolled, activeNav }) {
       <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, padding: isMobile ? "16px 20px" : "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: "none", transition: "all 0.5s" }}>
         <a href="#top" className="nav-logo-link" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
-          <img src="/nocturn-logo.png" alt="Nocturn Labs" className="nav-logo-icon" style={{ width: "40px", height: "40px", objectFit: "contain", filter: "drop-shadow(0 0 8px rgba(240,148,58,0.35))", transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
+          <img src="/nocturn-logo.webp" alt="Nocturn Labs" className="nav-logo-icon" style={{ width: "40px", height: "40px", objectFit: "contain", filter: "drop-shadow(0 0 8px rgba(240,148,58,0.35))", transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "20px", fontWeight: 900, color: "#ffffff", letterSpacing: "0.5px" }}>Nocturn Labs</span>
         </a>
         {isMobile ? (
@@ -1257,6 +1267,7 @@ function SpaceGallery() {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const stateRef = useRef({});
+  const [inited, setInited] = useState(false);
   const [focused, setFocused] = useState(false);
   const [fIdx, setFIdx] = useState(-1);
   const [sStg, setSStg] = useState(0);
@@ -1279,7 +1290,19 @@ function SpaceGallery() {
   const advSRef = useRef(null);
   const setStgRef = useRef(null);
 
+  // Defer initialization until section is near viewport
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setInited(true); obs.disconnect(); }
+    }, { rootMargin: '400px' });
+    obs.observe(container);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!inited) return;
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
@@ -1313,7 +1336,7 @@ function SpaceGallery() {
     let hovIdx = -1, prevHovIdx = -2;
 
     // Throttle React state updates to avoid 60fps re-renders
-    let _lastLabelIdx = -2, _lastScrollPct = -1;
+    let _lastLabelIdx = -2, _lastScrollPct = -1, _stopIdx = -1;
     const _tmpVec = new THREE.Vector3(); // reusable vector to reduce GC
     const _tmpVec2 = new THREE.Vector3();
     const _tmpEuler = new THREE.Euler();
@@ -1829,7 +1852,8 @@ function SpaceGallery() {
 
     function handleMouseDown(e) {
       if (_focused || e.target.closest('.sg-ui')) return;
-      if (hovIdx >= 0) { dragging = true; dragS = screens[hovIdx]; dragSt.set(mx, my); }
+      const clickIdx = hovIdx >= 0 ? hovIdx : _stopIdx;
+      if (clickIdx >= 0) { dragging = true; dragS = screens[clickIdx]; dragSt.set(mx, my); }
     }
     function handleMouseUp() {
       if (dragging) {
@@ -1863,7 +1887,8 @@ function SpaceGallery() {
     }
     function handleTouchEnd() {
       const elapsed = Date.now() - touchStartTime;
-      if (!touchMoved && elapsed < 300 && hovIdx >= 0 && !_focused) doFocus(hovIdx);
+      const tapIdx = hovIdx >= 0 ? hovIdx : _stopIdx;
+      if (!touchMoved && elapsed < 300 && tapIdx >= 0 && !_focused) doFocus(tapIdx);
     }
 
     function handleKey(e) {
@@ -1912,9 +1937,18 @@ function SpaceGallery() {
     window.addEventListener('wheel', handleWheelGlobal, { passive: false });
     canvas.addEventListener('wheel', handleWheel, { passive: false });
 
+    // Pause RAF when gallery is off-screen
+    let sgVisible = true;
+    const visObs = new IntersectionObserver(([entry]) => {
+      sgVisible = entry.isIntersecting;
+      if (sgVisible && !animId) animate();
+    }, { rootMargin: '200px' });
+    visObs.observe(container);
+
     // Animation loop
     let animId;
     function animate() {
+      if (!sgVisible) { animId = null; return; }
       animId = requestAnimationFrame(animate);
       const now = performance.now()/1000; dt = Math.min(now-lastT, 0.033); lastT = now; t += dt;
       const dtN = dt * 60; // normalized dt (1.0 at 60fps)
@@ -1959,12 +1993,14 @@ function SpaceGallery() {
               // STOP — lock camera in front of screen
               camTP.copy(viewCams[z[2]]);
               camTL.copy(viewLooks[z[2]]);
+              _stopIdx = z[2];
             } else {
               // TRAVEL — lerp between two positions
               const fromCam = z[2] === -1 ? startCam : viewCams[z[2]];
               const fromLook = z[2] === -1 ? startLook : viewLooks[z[2]];
               camTP.copy(fromCam).lerp(viewCams[z[3]], smooth);
               camTL.copy(fromLook).lerp(viewLooks[z[3]], smooth);
+              _stopIdx = -1;
             }
             break;
           }
@@ -2153,7 +2189,9 @@ function SpaceGallery() {
     stateRef.current = { renderer, scene, screens, textures, spotLight };
 
     return () => {
+      sgVisible = false;
       cancelAnimationFrame(animId);
+      visObs.disconnect();
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
@@ -2177,7 +2215,7 @@ function SpaceGallery() {
       textures.forEach(tex => tex.dispose());
       canvasTextures.forEach(tex => tex.dispose());
     };
-  }, []);
+  }, [inited]);
 
   const storyLen = fIdx >= 0 ? GALLERY_STORIES[fIdx].length : 4;
   const proj = fIdx >= 0 ? PROJECTS[fIdx] : null;
@@ -2416,7 +2454,7 @@ function PortfolioCard({ project }) {
       </div>
       <div style={{ position: "absolute", bottom: "40px", left: "40px", right: "40px", zIndex: 2 }}>
         {project.logo ? (
-          <img src={project.logo} alt={project.title} style={{ maxHeight: "60px", maxWidth: "280px", objectFit: "contain", filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.5))", transform: hovered ? "translateY(-8px)" : "translateY(0)", transition: "transform 0.4s ease" }} />
+          <img loading="lazy" src={project.logo} alt={project.title} style={{ maxHeight: "60px", maxWidth: "280px", objectFit: "contain", filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.5))", transform: hovered ? "translateY(-8px)" : "translateY(0)", transition: "transform 0.4s ease" }} />
         ) : (
           <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(32px, 4vw, 48px)", color: "#ffffff", margin: 0, fontWeight: 400, letterSpacing: "-2px", transform: hovered ? "translateY(-8px)" : "translateY(0)", transition: "transform 0.4s ease", textShadow: "0 2px 20px rgba(0,0,0,0.5)", lineHeight: 1.1 }}>
             {project.title}<span style={{ color: "rgba(255,255,255,0.8)" }}>.</span>
@@ -2549,7 +2587,7 @@ function ProjectRow({ project, index, onHover }) {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "16px", transition: "all 0.4s", transform: hovered ? "translateX(20px)" : "translateX(0)" }}>
             {project.logo && (
-              <img src={project.logo} alt={project.title} style={{ height: "40px", objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))" }} />
+              <img loading="lazy" src={project.logo} alt={project.title} style={{ height: "40px", objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))" }} />
             )}
             <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: hovered ? "52px" : "48px", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400, letterSpacing: "-2px", transition: "font-size 0.4s" }}>
               {project.fullTitle || project.title}<span style={{ color: project.color, opacity: hovered ? 1 : 0, transition: "opacity 0.3s", marginLeft: "4px" }}>.</span>
@@ -2651,7 +2689,7 @@ function CaseStudyCard({ study }) {
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "rgba(255,255,255,0.9)", textTransform: "uppercase", padding: "4px 10px", border: "1px solid rgba(255,255,255,0.12)" }}>{study.tag}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "0 0 8px" }}>
-          {study.logo && <img src={study.logo} alt={study.title} style={{ height: "24px", objectFit: "contain", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.3))" }} />}
+          {study.logo && <img loading="lazy" src={study.logo} alt={study.title} style={{ height: "24px", objectFit: "contain", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.3))" }} />}
           <h4 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "24px", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400 }}>{study.title}</h4>
         </div>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.9)", margin: "0 0 24px", lineHeight: 1.5 }}>{study.desc}</p>
@@ -2845,16 +2883,16 @@ function AboutSection() {
         </div>
         <div className="client-logos" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px" }}>
           {[
-            { name: "Precision Auto Detailing", logo: "/precision-logo.png", url: "https://precisionautodetailnj.com" },
-            { name: "Cyrath", logo: "/cyrath-logo.png", url: "https://cyrath.com" },
-            { name: "PulsBrush", logo: "/pulsbrush-logo.png", url: "https://pulsbrush.com" },
-            { name: "Decantoir", logo: "/decantoir-logo.png", url: "https://decantoir.com" },
+            { name: "Precision Auto Detailing", logo: "/precision-logo.webp", url: "https://precisionautodetailnj.com" },
+            { name: "Cyrath", logo: "/cyrath-logo.webp", url: "https://cyrath.com" },
+            { name: "PulsBrush", logo: "/pulsbrush-logo.webp", url: "https://pulsbrush.com" },
+            { name: "Decantoir", logo: "/decantoir-logo.webp", url: "https://decantoir.com" },
           ].map((client, i) => (
             <a key={client.name} href={client.url} target="_blank" rel="noopener noreferrer" data-hover
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px", textDecoration: "none", padding: "48px 24px", background: "transparent", border: "1px solid transparent", borderRadius: "8px", opacity: proofVis ? 1 : 0, transform: proofVis ? "translateY(0)" : "translateY(15px)", transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${0.3 + i * 0.1}s` }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(232,98,44,0.4)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(232,98,44,0.25)'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.querySelector('img').style.transform = 'scale(1.12)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.querySelector('img').style.transform = 'scale(1)'; }}>
-              <img src={client.logo} alt={client.name} style={{ width: "80px", height: "80px", objectFit: "contain", transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }} />
+              <img loading="lazy" src={client.logo} alt={client.name} style={{ width: "80px", height: "80px", objectFit: "contain", transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(11px, 2.5vw, 15px)", fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "1px", textTransform: "uppercase", textAlign: "center", lineHeight: 1.3 }}>{client.name}</span>
             </a>
           ))}
@@ -3365,7 +3403,7 @@ function Footer() {
     <>
       {/* Watermark */}
       <div ref={watermarkRef} style={{ textAlign: "center", margin: "60px 0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", gap: "24px" }}>
-        <img src="/nocturn-logo.png" alt="" style={{ width: "clamp(80px, 12vw, 160px)", height: "clamp(80px, 12vw, 160px)", objectFit: "contain", opacity: watermarkVis ? 0.3 : 0.08, transition: "opacity 1s ease", filter: "grayscale(80%)" }} />
+        <img loading="lazy" src="/nocturn-logo.webp" alt="" style={{ width: "clamp(80px, 12vw, 160px)", height: "clamp(80px, 12vw, 160px)", objectFit: "contain", opacity: watermarkVis ? 0.3 : 0.08, transition: "opacity 1s ease", filter: "grayscale(80%)" }} />
         <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(48px, 10vw, 140px)", fontWeight: 900, color: watermarkVis ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)", transition: "color 1s ease", letterSpacing: "2px", display: "block", textTransform: "uppercase" }}>
           Nocturn Labs
         </span>
@@ -3375,13 +3413,13 @@ function Footer() {
           {/* Col 1 — Brand */}
           <div>
             <div className="nav-logo-link" style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-              <img src="/nocturn-logo.png" alt="Nocturn Labs" className="nav-logo-icon" style={{ width: "36px", height: "36px", objectFit: "contain", filter: "drop-shadow(0 0 6px rgba(240,148,58,0.3))", transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
+              <img src="/nocturn-logo.webp" alt="Nocturn Labs" className="nav-logo-icon" style={{ width: "36px", height: "36px", objectFit: "contain", filter: "drop-shadow(0 0 6px rgba(240,148,58,0.3))", transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "22px", fontWeight: 900, color: "rgba(255,255,255,0.9)", letterSpacing: "0.5px" }}>Nocturn Labs</span>
             </div>
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.9)", marginTop: "16px", lineHeight: 1.7, maxWidth: "300px" }}>Premium web design for brands that refuse to blend in. We build from scratch — no templates, no shortcuts.</p>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "24px" }}>
               <div style={{ display: "flex" }}>
-                {["/precision-logo.png", "/cyrath-logo.png", "/pulsbrush-logo.png", "/decantoir-logo.png"].map((logo, i) => (
+                {["/precision-logo.webp", "/cyrath-logo.webp", "/pulsbrush-logo.webp", "/decantoir-logo.webp"].map((logo, i) => (
                   <div key={i} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: i > 0 ? "-8px" : "0", border: "2px solid #080812", zIndex: 4 - i, overflow: "hidden" }}>
                     <img src={logo} alt="" style={{ width: "22px", height: "22px", objectFit: "contain" }} />
                   </div>
@@ -3426,7 +3464,7 @@ function Footer() {
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(15,15,35,0.25)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15,15,35,0.15)"; }}
               >
-                <img src="/nocturn-logo.png" alt="Nocturn Labs" className="nav-logo-icon" style={{ width: "36px", height: "36px", objectFit: "contain", flexShrink: 0, filter: "drop-shadow(0 0 6px rgba(240,148,58,0.6))", transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
+                <img src="/nocturn-logo.webp" alt="Nocturn Labs" className="nav-logo-icon" style={{ width: "36px", height: "36px", objectFit: "contain", flexShrink: 0, filter: "drop-shadow(0 0 6px rgba(240,148,58,0.6))", transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
                 <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", color: "#ffffff", fontWeight: 900, letterSpacing: "0.5px", textShadow: "0 0 8px rgba(240,148,58,0.6), 0 0 20px rgba(232,98,44,0.3)" }}>Nocturn Labs</span>
               </a>
             </div>
@@ -3476,7 +3514,6 @@ export default function AgencySite() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Instrument+Serif:ital@0;1&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         body { background: #080812; color: #e8e4df; overflow-x: hidden; max-width: 100vw; }
