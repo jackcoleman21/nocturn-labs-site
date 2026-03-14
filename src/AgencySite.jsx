@@ -1327,31 +1327,51 @@ function SpaceGallery() {
       return tex;
     });
 
-    // CRT Shader
+    // CRT Shader — with static noise during boot, phosphor grid, chromatic aberration
     function createScreenMat(tex, ac) {
       return new THREE.ShaderMaterial({
         uniforms: {
           uTex: { value: tex }, uTime: { value: 0 }, uBoot: { value: 0 },
           uHover: { value: 0 }, uProx: { value: 0 }, uAccent: { value: ac },
+          uFocus: { value: 0 },
         },
         vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
         fragmentShader: `
-          uniform sampler2D uTex;uniform float uTime,uBoot,uHover,uProx;uniform vec3 uAccent;varying vec2 vUv;
+          uniform sampler2D uTex;uniform float uTime,uBoot,uHover,uProx,uFocus;uniform vec3 uAccent;varying vec2 vUv;
+          float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
           void main(){
             vec2 uv=vUv;vec2 center=uv-.5;float dist=dot(center,center);
-            uv=uv+center*dist*.05*uBoot;
+            uv=uv+center*dist*.06*uBoot;
+            // Static noise during boot phase
+            float noiseAmt=smoothstep(.0,.4,uBoot)*(1.-smoothstep(.3,.8,uBoot));
+            float noise=hash(uv*200.+uTime*100.)*noiseAmt;
+            // Chromatic aberration — stronger on hover + subtle on focus
+            float caStr=max(uHover*.004,uFocus*.001);
             vec4 tex;
-            if(uHover>.01){float r=texture2D(uTex,uv+vec2(.003,0.)*uHover).r;float g=texture2D(uTex,uv).g;float b=texture2D(uTex,uv-vec2(.003,0.)*uHover).b;tex=vec4(r,g,b,1.);}
-            else{tex=texture2D(uTex,uv);}
-            float scan=sin(uv.y*400.+uTime*2.)*.5+.5;scan=mix(1.,scan,.06*uBoot);
-            float phosphor=sin(uv.x*800.)*.5+.5;phosphor=mix(1.,phosphor,.015*uBoot);
+            float r=texture2D(uTex,uv+vec2(caStr,0.)).r;
+            float g=texture2D(uTex,uv).g;
+            float b=texture2D(uTex,uv-vec2(caStr,0.)).b;
+            tex=vec4(r,g,b,1.);
+            // Scanlines + phosphor grid
+            float scan=sin(uv.y*400.+uTime*2.)*.5+.5;scan=mix(1.,scan,.07*uBoot);
+            float phosphor=sin(uv.x*800.)*.5+.5;phosphor=mix(1.,phosphor,.018*uBoot);
+            // Rolling scan line
+            float rollY=fract(uTime*.08);float roll=1.-smoothstep(0.,.008,abs(uv.y-rollY))*.15*uBoot;
             float vig=1.-dist*1.8;vig=clamp(vig,0.,1.);
             float bootMask=smoothstep(0.,.5,uBoot);float wipe=smoothstep(0.,1.,uBoot*2.-abs(uv.y-.5)*2.);
-            vec3 darkScreen=uAccent*.03;vec3 color=mix(darkScreen,tex.rgb*scan*phosphor*vig,bootMask*wipe);
-            float edge=max(abs(center.x),abs(center.y));float edgeGlow=smoothstep(.45,.5,edge)*uHover*.4;color+=uAccent*edgeGlow;
-            float flicker=1.+sin(uTime*30.+sin(uTime*7.)*3.)*.004*uBoot;color*=flicker;
-            color+=uAccent*.008*uBoot;
-            float alpha=mix(.12,1.,uBoot*.5+uProx*.5);
+            vec3 darkScreen=uAccent*.04;
+            vec3 staticCol=vec3(noise)*uAccent*2.;
+            vec3 imgCol=tex.rgb*scan*phosphor*vig*roll;
+            vec3 color=mix(darkScreen,mix(staticCol,imgCol,smoothstep(.2,.6,uBoot)),bootMask*wipe);
+            // Edge glow
+            float edge=max(abs(center.x),abs(center.y));
+            float edgeGlow=smoothstep(.44,.5,edge)*(uHover*.5+uFocus*.3);
+            color+=uAccent*edgeGlow;
+            // Flicker
+            float flicker=1.+sin(uTime*30.+sin(uTime*7.)*3.)*.005*uBoot;color*=flicker;
+            // Ambient accent tint
+            color+=uAccent*(.01*uBoot+.015*uFocus);
+            float alpha=mix(.1,1.,uBoot*.5+uProx*.5+uFocus*.3);
             gl_FragColor=vec4(color,alpha);
           }
         `,
@@ -1376,6 +1396,22 @@ function SpaceGallery() {
       mesh.userData = { idx: i };
       scene.add(mesh);
 
+      // 3D Bezel frame — dark metallic border around screen
+      const bD = 0.08, bW = sW + bD * 2, bH = sH + bD * 2;
+      const bezelMat = new THREE.MeshStandardMaterial({ color: 0x0c0c14, metalness: 0.8, roughness: 0.3, transparent: true, opacity: 0.9 });
+      // Top bezel
+      const bT = new THREE.Mesh(new THREE.BoxGeometry(bW, bD, 0.06), bezelMat);
+      bT.position.set(0, sH/2 + bD/2, -0.02); mesh.add(bT);
+      // Bottom bezel
+      const bB = new THREE.Mesh(new THREE.BoxGeometry(bW, bD, 0.06), bezelMat);
+      bB.position.set(0, -sH/2 - bD/2, -0.02); mesh.add(bB);
+      // Left bezel
+      const bL = new THREE.Mesh(new THREE.BoxGeometry(bD, bH, 0.06), bezelMat);
+      bL.position.set(-sW/2 - bD/2, 0, -0.02); mesh.add(bL);
+      // Right bezel
+      const bR = new THREE.Mesh(new THREE.BoxGeometry(bD, bH, 0.06), bezelMat);
+      bR.position.set(sW/2 + bD/2, 0, -0.02); mesh.add(bR);
+
       // Chrome bar
       const chr = new THREE.Mesh(new THREE.PlaneGeometry(sW, sH * 0.05), new THREE.MeshBasicMaterial({ color: 0x16161e, transparent: true, opacity: 0.92 }));
       chr.position.set(0, sH * 0.5 + sH * 0.025, 0.015);
@@ -1398,23 +1434,54 @@ function SpaceGallery() {
       urlMesh.position.set(0.3, 0, 0.001);
       chr.add(urlMesh);
 
+      // Holographic floating tag — project name
+      const tagCanvas = document.createElement('canvas');
+      tagCanvas.width = 512; tagCanvas.height = 48;
+      const tctx = tagCanvas.getContext('2d');
+      tctx.fillStyle = GALLERY_ACCENTS[i];
+      tctx.font = 'bold 18px monospace';
+      tctx.fillText((p.fullTitle || p.title).toUpperCase(), 8, 22);
+      tctx.fillStyle = 'rgba(237,232,224,0.4)';
+      tctx.font = '12px monospace';
+      tctx.fillText(p.category, 8, 40);
+      const tagTex = new THREE.CanvasTexture(tagCanvas);
+      const tagMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.5, 0.24),
+        new THREE.MeshBasicMaterial({ map: tagTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
+      );
+      tagMesh.position.set(-sW/2 + 1.2, -sH/2 - 0.35, 0.1);
+      mesh.add(tagMesh);
+
+      // Holographic connector line from tag to screen bottom
+      const connGeo = new THREE.BufferGeometry();
+      connGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,sH/2+0.35-(-sH/2-0.2),0, 0,0,0]), 3));
+      const connLine = new THREE.Line(connGeo, new THREE.LineBasicMaterial({ color: ac, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      connLine.position.set(-sW/2 + 0.1, -sH/2 - 0.2, 0.05);
+      mesh.add(connLine);
+
       // Glow edges
       const eM = () => new THREE.MeshBasicMaterial({ color: ac, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
       const edges = [
-        new THREE.Mesh(new THREE.PlaneGeometry(sW + 0.06, 0.025), eM()),
-        new THREE.Mesh(new THREE.PlaneGeometry(sW + 0.06, 0.025), eM()),
-        new THREE.Mesh(new THREE.PlaneGeometry(0.025, sH + 0.06), eM()),
-        new THREE.Mesh(new THREE.PlaneGeometry(0.025, sH + 0.06), eM()),
+        new THREE.Mesh(new THREE.PlaneGeometry(sW + 0.1, 0.03), eM()),
+        new THREE.Mesh(new THREE.PlaneGeometry(sW + 0.1, 0.03), eM()),
+        new THREE.Mesh(new THREE.PlaneGeometry(0.03, sH + 0.1), eM()),
+        new THREE.Mesh(new THREE.PlaneGeometry(0.03, sH + 0.1), eM()),
       ];
-      edges[0].position.set(0, sH / 2 + 0.015, 0.02);
-      edges[1].position.set(0, -sH / 2 - 0.015, 0.02);
-      edges[2].position.set(-sW / 2 - 0.015, 0, 0.02);
-      edges[3].position.set(sW / 2 + 0.015, 0, 0.02);
+      edges[0].position.set(0, sH / 2 + 0.02, 0.03);
+      edges[1].position.set(0, -sH / 2 - 0.02, 0.03);
+      edges[2].position.set(-sW / 2 - 0.02, 0, 0.03);
+      edges[3].position.set(sW / 2 + 0.02, 0, 0.03);
       edges.forEach(e => mesh.add(e));
 
-      const pl = new THREE.PointLight(ac, 0, 10);
-      pl.position.set(0, 0, 1.5);
+      const pl = new THREE.PointLight(ac, 0, 12);
+      pl.position.set(0, 0, 2);
       mesh.add(pl);
+
+      // Screen back-light glow
+      const glowMat = new THREE.MeshBasicMaterial({ color: ac, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide });
+      const glowPlane = new THREE.Mesh(new THREE.PlaneGeometry(sW * 1.3, sH * 1.3), glowMat);
+      glowPlane.position.set(0, 0, -0.15);
+      mesh.add(glowPlane);
 
       const refMat = new THREE.MeshBasicMaterial({ color: ac, transparent: true, opacity: 0.02, blending: THREE.AdditiveBlending, depthWrite: false });
       const ref = new THREE.Mesh(new THREE.PlaneGeometry(sW * 1.2, sH * 0.8), refMat);
@@ -1426,12 +1493,12 @@ function SpaceGallery() {
       const restPos = new THREE.Vector3(...gp.pos);
       const restRot = new THREE.Vector3(...gp.rot);
       screens.push({
-        mesh, mat, edges, pl, refMat,
+        mesh, mat, edges, pl, refMat, glowMat, tagMesh, connLine,
         pos: restPos.clone(), restPos,
         vel: new THREE.Vector3(),
         rot: new THREE.Euler(...gp.rot), restRot,
         angVel: new THREE.Vector3(),
-        hover: 0, prox: 0, boot: 0,
+        hover: 0, prox: 0, boot: 0, focusAmt: 0,
       });
     }
 
@@ -1600,9 +1667,53 @@ function SpaceGallery() {
     const apG = new THREE.BufferGeometry(); apG.setAttribute('position', new THREE.BufferAttribute(apP, 3));
     scene.add(new THREE.Points(apG, new THREE.PointsMaterial({color:0x334455,size:0.015,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true})));
 
+    // Aurora ribbons — flowing light ribbons in the deep background
+    const auroraRibbons = [];
+    if (!isMob) {
+      const aurColors = [0x2244aa, 0x44aa66, 0x6633aa, 0x2288aa];
+      for (let i = 0; i < 4; i++) {
+        const pts = [];
+        const baseZ = -15 - i * 18;
+        const baseY = 8 + Math.random() * 4;
+        for (let j = 0; j <= 20; j++) {
+          const frac = j / 20;
+          pts.push(new THREE.Vector3(
+            (frac - 0.5) * 40 + Math.sin(frac * Math.PI * 2 + i) * 3,
+            baseY + Math.sin(frac * Math.PI * 3 + i * 2) * 2,
+            baseZ + Math.sin(frac * Math.PI) * 5
+          ));
+        }
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const tubePts = curve.getPoints(40);
+        const tubeGeo = new THREE.BufferGeometry().setFromPoints(tubePts);
+        const tubeMat = new THREE.LineBasicMaterial({ color: aurColors[i], transparent: true, opacity: 0.025, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+        const line = new THREE.Line(tubeGeo, tubeMat);
+        line.renderOrder = -92; scene.add(line);
+        auroraRibbons.push({ line, mat: tubeMat, pts, curve, baseOp: 0.025, phase: i * 1.5, speed: 0.15 + Math.random() * 0.1 });
+      }
+    }
+
+    // Lens flare sprites near bright stars
+    const flares = [];
+    if (!isMob) {
+      for (let i = 0; i < Math.min(S2N, 12); i++) {
+        const br = s2Sz[i];
+        if (br < 3.5) continue;
+        const flareMat = new THREE.SpriteMaterial({ color: new THREE.Color(s2Col[i*3], s2Col[i*3+1], s2Col[i*3+2]), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+        const sprite = new THREE.Sprite(flareMat);
+        sprite.position.set(s2P[i*3], s2P[i*3+1], s2P[i*3+2]);
+        sprite.scale.setScalar(0.8);
+        sprite.renderOrder = -97; scene.add(sprite);
+        flares.push({ sprite, mat: flareMat, starIdx: i, baseScale: 0.5 + br * 0.15 });
+      }
+    }
+
     // Lights
-    scene.add(new THREE.AmbientLight(0x060612, 0.4));
-    const dl = new THREE.DirectionalLight(0x5566aa, 0.3); dl.position.set(3,5,5); scene.add(dl);
+    scene.add(new THREE.AmbientLight(0x060612, 0.5));
+    const dl = new THREE.DirectionalLight(0x5566aa, 0.35); dl.position.set(3,5,5); scene.add(dl);
+    // Spotlight for focus mode
+    const spotLight = new THREE.SpotLight(0xffffff, 0, 20, Math.PI * 0.25, 0.5, 1);
+    spotLight.visible = false; scene.add(spotLight); scene.add(spotLight.target);
 
     // Camera spline
     const splinePoints = [
@@ -1781,8 +1892,25 @@ function SpaceGallery() {
       }
       camCP.lerp(camTP, camLerpFactor);
       cam.position.copy(camCP);
+      // Camera micro-shake on fast scroll for visceral feel
+      const shakeAmt = Math.min(0.06, Math.abs(scrollVel) * 8);
+      if (shakeAmt > 0.002 && !_focused) {
+        cam.position.x += Math.sin(t * 40) * shakeAmt;
+        cam.position.y += Math.cos(t * 35) * shakeAmt * 0.6;
+      }
       _tmpVec.copy(camTL); _tmpVec.x += smx*(_focused?1.5:3.5); _tmpVec.y += smy*(_focused?1:2.5);
       cam.lookAt(_tmpVec);
+
+      // Focus mode spotlight
+      if (_focused && _fIdx >= 0) {
+        spotLight.visible = true;
+        spotLight.position.copy(cam.position);
+        spotLight.target.position.copy(screens[_fIdx].restPos);
+        spotLight.intensity += (2 - spotLight.intensity) * Math.min(1, 2 * dt);
+      } else {
+        spotLight.intensity *= Math.max(0, 1 - 3 * dt);
+        if (spotLight.intensity < 0.01) spotLight.visible = false;
+      }
 
       spawnWake(); updWake();
 
@@ -1845,15 +1973,30 @@ function SpaceGallery() {
         s.mat.uniforms.uBoot.value = s.boot;
         s.mat.uniforms.uHover.value = s.hover;
         s.mat.uniforms.uProx.value = s.prox;
+        // Focus amount smoothing
+        const focusTarget = (_focused && i === _fIdx) ? 1 : 0;
+        s.focusAmt += (focusTarget - s.focusAmt) * Math.min(1, 3 * dt);
+        s.mat.uniforms.uFocus.value = s.focusAmt;
+
         // Breathing glow on edges when screen is booted
-        const breathe = Math.sin(t*1.2+i*1.5)*0.05+0.05;
-        s.edges.forEach(e => { e.material.opacity = s.hover*0.5+s.prox*0.18+s.boot*breathe; });
-        s.pl.intensity = s.prox*0.5+s.hover*0.8+s.boot*0.2;
-        s.refMat.opacity = 0.02+s.boot*0.04+s.hover*0.03;
+        const breathe = Math.sin(t*1.2+i*1.5)*0.06+0.06;
+        s.edges.forEach(e => { e.material.opacity = s.hover*0.6+s.prox*0.2+s.boot*breathe+s.focusAmt*0.3; });
+        s.pl.intensity = s.prox*0.5+s.hover*0.8+s.boot*0.2+s.focusAmt*1.5;
+        s.refMat.opacity = 0.02+s.boot*0.04+s.hover*0.03+s.focusAmt*0.04;
+
+        // Back-light glow
+        s.glowMat.opacity = s.boot*0.015+s.hover*0.03+s.focusAmt*0.06;
+
+        // Holographic tag visibility — fades in with proximity
+        const tagOp = Math.max(0, s.prox * 0.6 + s.hover * 0.4 - (_focused && i !== _fIdx ? 0.8 : 0));
+        s.tagMesh.material.opacity = tagOp;
+        s.connLine.material.opacity = tagOp * 0.3;
+        // Tag subtle float
+        s.tagMesh.position.y = -sH/2 - 0.35 + Math.sin(t*0.8+i*2)*0.03;
 
         if (_focused) {
-          if (i===_fIdx) { s.mat.uniforms.uProx.value = 1; s.pl.intensity = 1.2; }
-          else { s.mat.uniforms.uBoot.value *= 0.15; s.pl.intensity *= 0.15; }
+          if (i===_fIdx) { s.mat.uniforms.uProx.value = 1; }
+          else { s.mat.uniforms.uBoot.value *= 0.12; s.pl.intensity *= 0.1; s.glowMat.opacity *= 0.1; }
         }
       }
 
@@ -1868,26 +2011,66 @@ function SpaceGallery() {
         } else if (!_focused) { setLabelVisible(false); }
       }
 
-      // Stars twinkle
-      const sa1 = s1G.attributes.size;
-      for (let i=0;i<S1N;i++){const tw=Math.sin(t*(1+s1Ph[i]*2.5)+s1Ph[i]*12)*0.5+0.5;sa1.array[i]=s1Sz[i]*(0.2+tw*0.8);}
-      sa1.needsUpdate=true;
+      // Star layer parallax — subtle shift relative to camera for depth
+      s1Mesh.position.x = cam.position.x * 0.02;
+      s1Mesh.position.y = cam.position.y * 0.02;
+      s2Mesh.position.x = cam.position.x * 0.05;
+      s2Mesh.position.y = cam.position.y * 0.05;
+
+      // Stars twinkle — only update every other frame for performance
+      const twinkleFrame = Math.floor(t * 30) % 2 === 0;
+      if (twinkleFrame) {
+        const sa1 = s1G.attributes.size;
+        for (let i=0;i<S1N;i++){const tw=Math.sin(t*(1+s1Ph[i]*2.5)+s1Ph[i]*12)*0.5+0.5;sa1.array[i]=s1Sz[i]*(0.2+tw*0.8);}
+        sa1.needsUpdate=true;
+      }
       const sa2 = s2G.attributes.size;
       for (let i=0;i<S2N;i++){const tw=Math.sin(t*(2+s2Ph[i]*3)+s2Ph[i]*8)*0.5+0.5;const pulse=Math.sin(t*0.5+s2Ph[i]*5)*0.3+0.7;sa2.array[i]=s2Sz[i]*(0.1+tw*0.9)*pulse;}
       sa2.needsUpdate=true;
 
-      constellations.forEach(c => { c.m.opacity = 0.02+Math.sin(t*0.3+c.phase)*0.02; if(_focused) c.m.opacity *= 0.3; });
-      nebulae.forEach(n => { n.mesh.position.x+=n.driftX*dt; n.mesh.position.y+=n.driftY*dt; n.m.opacity=n.baseOp*(Math.sin(t*n.speed+n.phase)*0.25+0.75); if(_focused) n.m.opacity*=0.5; });
-      dustLanes.forEach(d => { d.m.opacity=d.baseOp*(Math.sin(t*d.speed+d.phase)*0.3+0.7); if(_focused) d.m.opacity*=0.4; });
-      shafts.forEach(s => { s.m.opacity=s.baseOp*(Math.sin(t*s.speed+s.phase)*0.4+0.6); if(_focused) s.m.opacity*=0.3; });
+      // Stars dim during focus
+      s1Mesh.material.opacity = _focused ? 0.35 : 0.9;
+      s2Mesh.material.opacity = _focused ? 0.4 : 0.95;
+
+      // Dim environment during focus
+      const envDim = _focused ? 0.25 : 1;
+      constellations.forEach(c => { c.m.opacity = (0.02+Math.sin(t*0.3+c.phase)*0.02)*envDim; });
+      nebulae.forEach(n => { n.mesh.position.x+=n.driftX*dt; n.mesh.position.y+=n.driftY*dt; n.m.opacity=n.baseOp*(Math.sin(t*n.speed+n.phase)*0.25+0.75)*envDim; });
+      dustLanes.forEach(d => { d.m.opacity=d.baseOp*(Math.sin(t*d.speed+d.phase)*0.3+0.7)*envDim; });
+      shafts.forEach(s => { s.m.opacity=s.baseOp*(Math.sin(t*s.speed+s.phase)*0.4+0.6)*envDim; });
       crystals.forEach(c => { c.mesh.rotation.x+=c.rx*dt; c.mesh.rotation.y+=c.ry*dt; c.mesh.rotation.z+=c.rz*dt; c.mesh.position.y+=Math.sin(t*c.bobSpd+c.bob)*0.0003; });
       updSh();
+
+      // Aurora ribbon animation
+      auroraRibbons.forEach(ar => {
+        const positions = ar.line.geometry.attributes.position.array;
+        for (let j = 0; j < positions.length; j += 3) {
+          const frac = j / positions.length;
+          positions[j+1] += Math.sin(t * ar.speed + frac * 6 + ar.phase) * 0.003;
+          positions[j] += Math.cos(t * ar.speed * 0.7 + frac * 4 + ar.phase) * 0.002;
+        }
+        ar.line.geometry.attributes.position.needsUpdate = true;
+        ar.mat.opacity = ar.baseOp * (Math.sin(t * 0.2 + ar.phase) * 0.4 + 0.6) * envDim;
+      });
+
+      // Lens flares — pulse based on star brightness and proximity to camera view
+      flares.forEach(f => {
+        const screenPos = f.sprite.position.clone().project(cam);
+        const onScreen = Math.abs(screenPos.x) < 1.2 && Math.abs(screenPos.y) < 1.2 && screenPos.z < 1;
+        const targetOp = onScreen ? 0.06 + Math.sin(t * 2 + f.starIdx) * 0.03 : 0;
+        f.mat.opacity += (targetOp - f.mat.opacity) * Math.min(1, 3 * dt);
+        f.sprite.scale.setScalar(f.baseScale * (1 + Math.sin(t * 1.5 + f.starIdx * 2) * 0.2));
+        if (_focused) f.mat.opacity *= 0.2;
+      });
+
+      // Dynamic fog — thicker during focus for isolation
+      scene.fog.density += ((_focused ? 0.008 : 0.004) - scene.fog.density) * Math.min(1, 2 * dt);
 
       renderer.render(scene, cam);
     }
     animate();
 
-    stateRef.current = { renderer, scene, screens, textures };
+    stateRef.current = { renderer, scene, screens, textures, spotLight };
 
     return () => {
       cancelAnimationFrame(animId);
@@ -1939,38 +2122,45 @@ function SpaceGallery() {
         .sg-hint{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.2);z-index:4;transition:opacity .5s;display:flex;flex-direction:column;align-items:center;gap:8px}
         .sg-hint-arrow{width:1px;height:24px;background:linear-gradient(to bottom,transparent,rgba(237,232,224,.15));position:relative;animation:sg-bob 2s ease-in-out infinite}
         @keyframes sg-bob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(6px);opacity:1}}
-        .sg-xbtn{position:absolute;top:24px;right:24px;z-index:10;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .5s cubic-bezier(.22,1,.36,1)}
-        .sg-xbtn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25)}
-        .sg-xbtn::before,.sg-xbtn::after{content:'';position:absolute;top:50%;left:50%;width:15px;height:1.5px;background:#ede8e0;transform-origin:center}
+        .sg-xbtn{position:absolute;top:24px;right:24px;z-index:10;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .5s cubic-bezier(.22,1,.36,1);backdrop-filter:blur(8px)}
+        .sg-xbtn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);transform:scale(1.1)}
+        .sg-xbtn::before,.sg-xbtn::after{content:'';position:absolute;top:50%;left:50%;width:15px;height:1.5px;background:#ede8e0;transform-origin:center;transition:transform .3s}
         .sg-xbtn::before{transform:translate(-50%,-50%) rotate(45deg)}
         .sg-xbtn::after{transform:translate(-50%,-50%) rotate(-45deg)}
-        .sg-spnl{position:absolute;top:0;left:0;width:42%;height:100%;background:linear-gradient(to right,rgba(1,1,8,.95) 0%,rgba(1,1,8,.92) 45%,rgba(1,1,8,.6) 78%,transparent 100%);display:flex;flex-direction:column;justify-content:center;padding:4rem 2rem 4rem 3rem;z-index:5;transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
+        .sg-xbtn:hover::before{transform:translate(-50%,-50%) rotate(135deg)}
+        .sg-xbtn:hover::after{transform:translate(-50%,-50%) rotate(225deg)}
+        .sg-lbar{position:absolute;left:0;right:0;height:0;background:#010108;z-index:6;transition:height .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
+        .sg-lbar-t{top:0}
+        .sg-lbar-b{bottom:0}
+        .sg-spnl{position:absolute;top:0;left:0;width:42%;height:100%;background:linear-gradient(to right,rgba(1,1,8,.92) 0%,rgba(1,1,8,.88) 40%,rgba(1,1,8,.5) 75%,transparent 100%);backdrop-filter:blur(12px);display:flex;flex-direction:column;justify-content:center;padding:4rem 2rem 4rem 3rem;z-index:7;transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
         .sg-spnl.on{opacity:1;transform:translateX(0);pointer-events:all}
-        .sg-sl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:12px;letter-spacing:.5em;text-transform:uppercase;margin-bottom:.6rem}
-        .sg-sh{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:italic;font-size:clamp(1.4rem,2.5vw,2rem);line-height:1.12;margin-bottom:.6rem}
-        .sg-sb{font-family:'DM Sans',sans-serif;font-weight:300;font-size:14px;line-height:1.85;color:rgba(237,232,224,.65);max-width:380px}
-        .sg-ss{display:flex;gap:2rem;margin-top:1.2rem}
-        .sg-ssv{font-family:'JetBrains Mono',monospace;font-weight:400;font-size:1.2rem}
-        .sg-ssl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,232,224,.45);margin-top:.1rem}
-        .sg-sdots{display:flex;gap:8px;margin-top:1.6rem}
-        .sg-sdot{width:24px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);cursor:pointer;transition:background .4s,width .4s;border:none}
-        .sg-sdot.active{width:36px}
-        .sg-sdot:hover{background:rgba(255,255,255,.25)}
-        .sg-snv{display:flex;justify-content:space-between;align-items:center;margin-top:1.4rem;max-width:380px}
-        .sg-snb{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,232,224,.4);background:none;border:none;cursor:pointer;transition:color .3s}
-        .sg-snb:hover{color:var(--sg-ac,#e8622c)}
-        .sg-spr{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:11px;color:rgba(237,232,224,.25)}
-        .sg-vcta{position:absolute;bottom:12%;right:5%;display:inline-flex;align-items:center;gap:10px;padding:12px 26px;border-radius:26px;color:#010108;font-family:'JetBrains Mono',monospace;font-weight:400;font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;cursor:pointer;z-index:5;transition:all .6s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 30px rgba(0,0,0,.15)}
-        .sg-vcta:hover{filter:brightness(1.15);transform:translateY(-1px)}
+        .sg-sl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:11px;letter-spacing:.6em;text-transform:uppercase;margin-bottom:.8rem;opacity:.9}
+        .sg-sh{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:italic;font-size:clamp(1.5rem,2.8vw,2.2rem);line-height:1.15;margin-bottom:.8rem;color:rgba(237,232,224,.95)}
+        .sg-sb{font-family:'DM Sans',sans-serif;font-weight:300;font-size:14px;line-height:1.9;color:rgba(237,232,224,.6);max-width:380px}
+        .sg-ss{display:flex;gap:2.2rem;margin-top:1.4rem;padding:1rem 0;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
+        .sg-ssv{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:1.3rem;letter-spacing:.02em}
+        .sg-ssl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:rgba(237,232,224,.4);margin-top:.2rem}
+        .sg-sdots{display:flex;gap:10px;margin-top:1.8rem}
+        .sg-sdot{width:24px;height:3px;border-radius:2px;background:rgba(255,255,255,.08);cursor:pointer;transition:all .5s cubic-bezier(.22,1,.36,1);border:none}
+        .sg-sdot.active{width:40px}
+        .sg-sdot:hover{background:rgba(255,255,255,.2);transform:scaleY(1.5)}
+        .sg-snv{display:flex;justify-content:space-between;align-items:center;margin-top:1.6rem;max-width:380px}
+        .sg-snb{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,232,224,.35);background:none;border:none;cursor:pointer;transition:all .3s;padding:6px 0}
+        .sg-snb:hover{color:var(--sg-ac,#e8622c);transform:translateX(3px)}
+        .sg-spr{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;color:rgba(237,232,224,.2);letter-spacing:.15em}
+        .sg-vcta{position:absolute;bottom:12%;right:5%;display:inline-flex;align-items:center;gap:10px;padding:14px 30px;border-radius:28px;color:#010108;font-family:'JetBrains Mono',monospace;font-weight:500;font-size:11px;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;cursor:pointer;z-index:7;transition:all .6s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 30px rgba(0,0,0,.2),0 0 40px var(--sg-glow,rgba(255,255,255,.1))}
+        .sg-vcta:hover{filter:brightness(1.15);transform:translateY(-2px);box-shadow:0 8px 40px rgba(0,0,0,.3),0 0 60px var(--sg-glow,rgba(255,255,255,.15))}
         .sg-kbh{position:absolute;bottom:2rem;right:2rem;display:flex;flex-direction:column;gap:.4rem;z-index:4;pointer-events:none}
         .sg-kb{display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-weight:200;font-size:9px;letter-spacing:.15em;color:rgba(237,232,224,.15)}
         .sg-kbk{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:16px;padding:0 4px;border:1px solid rgba(237,232,224,.1);border-radius:3px;font-size:8px;color:rgba(237,232,224,.25)}
         @media(max-width:768px){
-          .sg-spnl{width:100%;padding:6rem 1.5rem 3rem;background:linear-gradient(to top,rgba(1,1,8,.97) 0%,rgba(1,1,8,.92) 60%,rgba(1,1,8,.5) 90%,transparent 100%);justify-content:flex-end}
+          .sg-spnl{width:100%;padding:6rem 1.5rem 3rem;background:linear-gradient(to top,rgba(1,1,8,.97) 0%,rgba(1,1,8,.92) 60%,rgba(1,1,8,.5) 90%,transparent 100%);justify-content:flex-end;backdrop-filter:blur(8px)}
           .sg-dbar{display:none}
           .sg-kbh{display:none}
+          .sg-lbar{display:none}
           .sg-vcta{bottom:6%;right:50%;transform:translateX(50%)}
           .sg-hud{top:1.2rem;left:1.2rem}
+          .sg-plbl-h{display:none}
         }
       `}</style>
 
@@ -1983,14 +2173,19 @@ function SpaceGallery() {
         {/* Speed lines overlay — visible during fast scroll */}
         <div className="sg-ov" style={{ zIndex: 1, background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(1,1,8,0.5) 100%)', opacity: Math.min(1, Math.abs(scrollPct) * 0.3), transition: 'opacity 0.3s', pointerEvents: 'none' }} />
 
+        {/* Cinematic letterbox bars during focus */}
+        <div className="sg-lbar sg-lbar-t" style={{ height: focused ? '48px' : '0' }} />
+        <div className="sg-lbar sg-lbar-b" style={{ height: focused ? '48px' : '0' }} />
+
         {/* HUD */}
-        <div className="sg-hud">
+        <div className="sg-hud" style={{ opacity: focused ? 0 : 1, transition: 'opacity 0.6s' }}>
           <span className="sg-hud-n">{hudNum}</span>
-          <span className="sg-hud-l">Selected Work</span>
+          <span className="sg-hud-l" style={{ opacity: 0.5 }}>{PROJECTS.length} Projects</span>
         </div>
 
         {/* Project Label */}
-        <div className="sg-plbl" style={{ opacity: labelVisible && !focused ? 1 : 0, transform: `translateX(-50%) translateY(${labelVisible && !focused ? 0 : 10}px)` }}>
+        <div className="sg-plbl" style={{ opacity: labelVisible && !focused ? 1 : 0, transform: `translateX(-50%) translateY(${labelVisible && !focused ? 0 : 15}px)` }}>
+          <div style={{ width: '30px', height: '1px', background: 'rgba(237,232,224,0.15)', margin: '0 auto 12px' }} />
           <div className="sg-plbl-n">{labelName}</div>
           <div className="sg-plbl-t">{labelTags}</div>
           <div className="sg-plbl-h">Click to explore · Drag to rotate</div>
@@ -2031,6 +2226,11 @@ function SpaceGallery() {
 
         {/* Side Panel */}
         <div className={`sg-spnl sg-ui ${panelOpen ? 'on' : ''}`} style={{ opacity: panelOpen ? 1 : 0, transform: panelOpen ? 'translateX(0)' : 'translateX(-30px)' }}>
+          {proj && (
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '.4em', color: 'rgba(237,232,224,0.2)', textTransform: 'uppercase', marginBottom: '1.2rem' }}>
+              {String(fIdx + 1).padStart(2,'0')} / {String(PROJECTS.length).padStart(2,'0')} — {proj.title}
+            </div>
+          )}
           {storyContent && (
             <>
               <div className="sg-sl" style={{ color: accentColor }}>{storyContent.l}</div>
@@ -2075,7 +2275,7 @@ function SpaceGallery() {
         {/* CTA */}
         {ctaVisible && proj && (
           <a className="sg-vcta sg-ui" href={proj.url} target="_blank" rel="noopener noreferrer"
-            style={{ background: accentColor, opacity: ctaVisible ? 1 : 0, pointerEvents: 'all' }}>
+            style={{ background: accentColor, opacity: ctaVisible ? 1 : 0, pointerEvents: 'all', '--sg-glow': accentColor + '40' }}>
             Visit Live Site →
           </a>
         )}
