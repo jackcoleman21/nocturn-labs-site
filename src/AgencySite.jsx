@@ -1509,6 +1509,16 @@ function SpaceGallery() {
       });
     }
 
+    // Precompute ideal camera positions for viewing each screen head-on
+    const viewCams = screens.map(s => {
+      const n = new THREE.Vector3(0, 0, 1);
+      n.applyEuler(new THREE.Euler(s.restRot.x, s.restRot.y, s.restRot.z));
+      return s.restPos.clone().add(n.multiplyScalar(8));
+    });
+    const viewLooks = screens.map(s => s.restPos.clone());
+    const startCam = new THREE.Vector3(0, 0.5, 12);
+    const startLook = new THREE.Vector3(0, 0.5, 4);
+
     // Stars layer 1
     const S1N = isMob ? 2000 : 4000;
     const s1P = new Float32Array(S1N * 3), s1Sz = new Float32Array(S1N), s1Ph = new Float32Array(S1N), s1Col = new Float32Array(S1N * 3);
@@ -1571,9 +1581,9 @@ function SpaceGallery() {
     // Nebulae
     const nebulae = [];
     const nebCfg = [
-      {x:8,y:5,z:-20,r:12,c:0x1a3366,o:0.035},{x:-10,y:-3,z:-45,r:15,c:0x331a55,o:0.03},
-      {x:5,y:7,z:-65,r:10,c:0x0d4433,o:0.025},{x:-6,y:4,z:-30,r:14,c:0x442244,o:0.028},
-      {x:3,y:-2,z:-80,r:11,c:0x1a2244,o:0.032},{x:-8,y:6,z:-55,r:13,c:0x223355,o:0.022},
+      {x:8,y:5,z:-20,r:12,c:0x0a1533,o:0.03},{x:-10,y:-3,z:-45,r:15,c:0x1a0a33,o:0.025},
+      {x:5,y:7,z:-65,r:10,c:0x0a1a2a,o:0.02},{x:-6,y:4,z:-30,r:14,c:0x1a1033,o:0.022},
+      {x:3,y:-2,z:-80,r:11,c:0x0d1a33,o:0.025},{x:-8,y:6,z:-55,r:13,c:0x111a33,o:0.018},
     ];
     for (const n of nebCfg) {
       const cs = 2 + Math.floor(Math.random()*3);
@@ -1593,8 +1603,8 @@ function SpaceGallery() {
     for (let i = 0; i < 12; i++) {
       const w = 30+Math.random()*40, h = 0.3+Math.random()*0.5;
       const g = new THREE.PlaneGeometry(w, h);
-      const hue = 0.55+Math.random()*0.3;
-      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue,0.3,0.15), transparent: true, opacity: 0.02+Math.random()*0.02, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+      const hue = 0.6+Math.random()*0.15;
+      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue,0.2,0.08), transparent: true, opacity: 0.015+Math.random()*0.015, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
       const mesh = new THREE.Mesh(g, m);
       mesh.position.set((Math.random()-0.5)*20,(Math.random()-0.5)*15,10-Math.random()*130);
       mesh.rotation.set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.5,(Math.random()-0.5)*1.2);
@@ -1674,36 +1684,41 @@ function SpaceGallery() {
     const apG = new THREE.BufferGeometry(); apG.setAttribute('position', new THREE.BufferAttribute(apP, 3));
     scene.add(new THREE.Points(apG, new THREE.PointsMaterial({color:0x334455,size:0.015,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true})));
 
-    // Aurora ribbons — layered flowing light ribbons in the deep background
-    const auroraRibbons = [];
+    // Deep space star clusters — distant galaxy-like concentrations
+    const starClusters = [];
     if (!isMob) {
-      const aurColors = [0x1a3388, 0x338855, 0x552288, 0x1a6688];
-      for (let i = 0; i < 4; i++) {
-        const baseZ = -20 - i * 20;
-        const baseY = 10 + i * 1.5;
-        // Multiple parallel strands per ribbon for a smoother, fuller look
-        const strands = 3;
-        for (let s = 0; s < strands; s++) {
-          const pts = [];
-          const yOff = (s - 1) * 0.8; // spread strands vertically
-          for (let j = 0; j <= 30; j++) {
-            const frac = j / 30;
-            pts.push(new THREE.Vector3(
-              (frac - 0.5) * 50 + Math.sin(frac * Math.PI * 1.5 + i + s * 0.3) * 4,
-              baseY + yOff + Math.sin(frac * Math.PI * 2 + i * 1.5 + s * 0.5) * 1.2,
-              baseZ + Math.sin(frac * Math.PI) * 3 - s * 0.5
-            ));
-          }
-          const curve = new THREE.CatmullRomCurve3(pts);
-          const tubePts = curve.getPoints(60);
-          const tubeGeo = new THREE.BufferGeometry().setFromPoints(tubePts);
-          const strandOp = s === 1 ? 0.018 : 0.01; // center strand brighter
-          const tubeMat = new THREE.LineBasicMaterial({ color: aurColors[i], transparent: true, opacity: strandOp, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-          const line = new THREE.Line(tubeGeo, tubeMat);
-          line.renderOrder = -92; scene.add(line);
-          const basePositions = new Float32Array(tubeGeo.attributes.position.array);
-          auroraRibbons.push({ line, mat: tubeMat, pts, curve, baseOp: strandOp, phase: i * 1.5 + s * 0.8, speed: 0.06 + Math.random() * 0.04, basePositions });
+      const clusterCfg = [
+        { x: 12, y: 8, z: -40, n: 120, spread: 4, color: 0x8899cc },
+        { x: -15, y: 6, z: -70, n: 100, spread: 3.5, color: 0x9988bb },
+        { x: 8, y: -4, z: -90, n: 90, spread: 3, color: 0x7799aa },
+        { x: -10, y: 10, z: -25, n: 80, spread: 2.5, color: 0xaabb99 },
+        { x: 18, y: 3, z: -55, n: 70, spread: 3, color: 0x8888cc },
+      ];
+      for (const cfg of clusterCfg) {
+        const cP = new Float32Array(cfg.n * 3), cSz = new Float32Array(cfg.n), cCol = new Float32Array(cfg.n * 3);
+        const baseCol = new THREE.Color(cfg.color);
+        for (let i = 0; i < cfg.n; i++) {
+          // Gaussian-ish distribution for natural cluster look
+          const r = cfg.spread * Math.pow(Math.random(), 0.5);
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          cP[i*3] = cfg.x + r * Math.sin(phi) * Math.cos(theta);
+          cP[i*3+1] = cfg.y + r * Math.sin(phi) * Math.sin(theta) * 0.6;
+          cP[i*3+2] = cfg.z + r * Math.cos(phi) * 0.8;
+          cSz[i] = 0.5 + Math.random() * 2.5;
+          // Slight color variation per star
+          const vary = 0.8 + Math.random() * 0.4;
+          cCol[i*3] = baseCol.r * vary;
+          cCol[i*3+1] = baseCol.g * vary;
+          cCol[i*3+2] = baseCol.b * vary;
         }
+        const cG = new THREE.BufferGeometry();
+        cG.setAttribute('position', new THREE.BufferAttribute(cP, 3));
+        cG.setAttribute('color', new THREE.BufferAttribute(cCol, 3));
+        cG.setAttribute('size', new THREE.BufferAttribute(cSz, 1));
+        const cMesh = new THREE.Points(cG, new THREE.PointsMaterial({ size: 0.04, vertexColors: true, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, fog: false }));
+        cMesh.renderOrder = -92; scene.add(cMesh);
+        starClusters.push({ mesh: cMesh, geo: cG, sizes: cSz, phase: Math.random() * Math.PI * 2 });
       }
     }
 
@@ -1863,6 +1878,11 @@ function SpaceGallery() {
       }
     }
 
+    // Block page scroll when focused
+    function handleWheelGlobal(e) {
+      if (_focused) e.preventDefault();
+    }
+
     // Mouse wheel during focus navigates story stages
     function handleWheel(e) {
       if (!_focused) return;
@@ -1889,6 +1909,7 @@ function SpaceGallery() {
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('keydown', handleKey);
     window.addEventListener('resize', handleResize);
+    window.addEventListener('wheel', handleWheelGlobal, { passive: false });
     canvas.addEventListener('wheel', handleWheel, { passive: false });
 
     // Animation loop
@@ -1898,7 +1919,7 @@ function SpaceGallery() {
       const now = performance.now()/1000; dt = Math.min(now-lastT, 0.033); lastT = now; t += dt;
       const dtN = dt * 60; // normalized dt (1.0 at 60fps)
       smx += (mx-smx)*Math.min(1, 2.5*dt); smy += (my-smy)*Math.min(1, 2.5*dt);
-      prevSV = scrollV; scrollV += (scrollT-scrollV)*Math.min(1, 2.2*dt); scrollVel = scrollV-prevSV;
+      prevSV = scrollV; scrollV += (scrollT-scrollV)*Math.min(1, 2.0*dt); scrollVel = scrollV-prevSV;
 
       // Throttle scroll pct updates (only when changed meaningfully)
       const roundedPct = Math.round(scrollV * 200) / 200;
@@ -1913,9 +1934,42 @@ function SpaceGallery() {
         camTP.copy(s.restPos).add(_tmpVec.multiplyScalar(6.5)); camTP.x -= 2.8;
         camTL.copy(s.restPos);
       } else {
-        const pt = camSpline.getPointAt(Math.min(scrollV, 0.999));
-        camTP.copy(pt);
-        camTL.set(camTP.x+Math.sin(scrollV*Math.PI)*2, camTP.y, camTP.z-8);
+        // Zone-based scroll: travel → STOP → travel → STOP → ...
+        // During STOP zones camera is locked directly in front of the screen
+        // 2000vh section ≈ 1900vh scrollable
+        // [zoneEnd, type, indexA, indexB]
+        //   type 0 = travel (lerp from A to B), type 1 = stop (hold at A)
+        //   index -1 = start position
+        const zones = [
+          [0.04, 0, -1, 0],  // travel: start → screen 0  (~76vh)
+          [0.23, 1, 0, 0],   // STOP at screen 0           (~360vh)
+          [0.29, 0, 0, 1],   // travel: screen 0 → 1       (~114vh)
+          [0.48, 1, 1, 1],   // STOP at screen 1           (~360vh)
+          [0.54, 0, 1, 2],   // travel: screen 1 → 2       (~114vh)
+          [0.73, 1, 2, 2],   // STOP at screen 2           (~360vh)
+          [0.79, 0, 2, 3],   // travel: screen 2 → 3       (~114vh)
+          [1.00, 1, 3, 3],   // STOP at screen 3           (~400vh)
+        ];
+        let prevEnd = 0;
+        for (const z of zones) {
+          if (scrollV <= z[0]) {
+            const frac = prevEnd < z[0] ? (scrollV - prevEnd) / (z[0] - prevEnd) : 0;
+            const smooth = frac * frac * (3 - 2 * frac); // smoothstep for travel
+            if (z[1] === 1) {
+              // STOP — lock camera in front of screen
+              camTP.copy(viewCams[z[2]]);
+              camTL.copy(viewLooks[z[2]]);
+            } else {
+              // TRAVEL — lerp between two positions
+              const fromCam = z[2] === -1 ? startCam : viewCams[z[2]];
+              const fromLook = z[2] === -1 ? startLook : viewLooks[z[2]];
+              camTP.copy(fromCam).lerp(viewCams[z[3]], smooth);
+              camTL.copy(fromLook).lerp(viewLooks[z[3]], smooth);
+            }
+            break;
+          }
+          prevEnd = z[0];
+        }
       }
       camCP.lerp(camTP, camLerpFactor);
       cam.position.copy(camCP);
@@ -2068,17 +2122,15 @@ function SpaceGallery() {
       crystals.forEach(c => { c.mesh.rotation.x+=c.rx*dt; c.mesh.rotation.y+=c.ry*dt; c.mesh.rotation.z+=c.rz*dt; c.mesh.position.y+=Math.sin(t*c.bobSpd+c.bob)*0.0003; });
       updSh();
 
-      // Aurora ribbon animation — gentle undulation from base positions
-      auroraRibbons.forEach(ar => {
-        const positions = ar.line.geometry.attributes.position.array;
-        const base = ar.basePositions;
-        for (let j = 0; j < positions.length; j += 3) {
-          const frac = j / positions.length;
-          positions[j] = base[j] + Math.cos(t * ar.speed * 0.5 + frac * 3 + ar.phase) * 0.15;
-          positions[j+1] = base[j+1] + Math.sin(t * ar.speed * 0.8 + frac * 4 + ar.phase) * 0.1;
+      // Star cluster twinkling
+      starClusters.forEach(sc => {
+        const sa = sc.geo.attributes.size;
+        for (let i = 0; i < sc.sizes.length; i++) {
+          const tw = Math.sin(t * (1.5 + (i % 7) * 0.4) + sc.phase + i * 2.3) * 0.5 + 0.5;
+          sa.array[i] = sc.sizes[i] * (0.3 + tw * 0.7);
         }
-        ar.line.geometry.attributes.position.needsUpdate = true;
-        ar.mat.opacity = ar.baseOp * (Math.sin(t * 0.15 + ar.phase) * 0.3 + 0.7) * envDim;
+        sa.needsUpdate = true;
+        sc.mesh.material.opacity = (0.5 + Math.sin(t * 0.3 + sc.phase) * 0.2) * envDim;
       });
 
       // Lens flares — pulse based on star brightness and proximity to camera view
@@ -2111,6 +2163,7 @@ function SpaceGallery() {
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('wheel', handleWheelGlobal);
       canvas.removeEventListener('wheel', handleWheel);
       canvas.style.cursor = 'default';
       renderer.dispose();
@@ -2141,7 +2194,7 @@ function SpaceGallery() {
   })();
 
   return (
-    <section id="work" ref={containerRef} style={{ height: '400vh', position: 'relative', background: '#010108' }}>
+    <section id="work" ref={containerRef} style={{ height: '2000vh', position: 'relative', background: '#010108' }}>
       {/* Top gradient blend from previous section */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '150px', background: 'linear-gradient(to bottom, #080812, #010108)', zIndex: 1, pointerEvents: 'none' }} />
       {/* Bottom gradient blend into next section */}
