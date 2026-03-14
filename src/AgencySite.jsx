@@ -1286,7 +1286,7 @@ function SpaceGallery() {
     const isMob = window.innerWidth < 768 || IS_TOUCH;
     let W = window.innerWidth, H = window.innerHeight;
     const PR = Math.min(devicePixelRatio, isMob ? 1 : 1.5);
-    const TD = 90;
+    const TD = 72;
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMob, powerPreference: 'high-performance' });
@@ -1297,7 +1297,7 @@ function SpaceGallery() {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x010108);
-    scene.fog = new THREE.FogExp2(0x010108, 0.007);
+    scene.fog = new THREE.FogExp2(0x010108, 0.004);
 
     const cam = new THREE.PerspectiveCamera(52, W / H, 0.1, 400);
     cam.position.set(0, 0.5, 12);
@@ -1430,7 +1430,7 @@ function SpaceGallery() {
     const S1N = isMob ? 2000 : 4000;
     const s1P = new Float32Array(S1N * 3), s1Sz = new Float32Array(S1N), s1Ph = new Float32Array(S1N), s1Col = new Float32Array(S1N * 3);
     for (let i = 0; i < S1N; i++) {
-      s1P[i*3] = (Math.random()-0.5)*60; s1P[i*3+1] = (Math.random()-0.5)*40; s1P[i*3+2] = 20-Math.random()*160;
+      s1P[i*3] = (Math.random()-0.5)*50; s1P[i*3+1] = (Math.random()-0.5)*30; s1P[i*3+2] = 20-Math.random()*110;
       s1Sz[i] = 0.3+Math.random()*1.8; s1Ph[i] = Math.random()*Math.PI*2;
       const temp = Math.random();
       if (temp > 0.85) { s1Col[i*3]=1;s1Col[i*3+1]=0.7;s1Col[i*3+2]=0.4; }
@@ -1448,7 +1448,7 @@ function SpaceGallery() {
     const S2N = isMob ? 150 : 300;
     const s2P = new Float32Array(S2N*3), s2Sz = new Float32Array(S2N), s2Ph = new Float32Array(S2N), s2Col = new Float32Array(S2N*3);
     for (let i = 0; i < S2N; i++) {
-      s2P[i*3] = (Math.random()-0.5)*55; s2P[i*3+1] = (Math.random()-0.5)*35; s2P[i*3+2] = 15-Math.random()*150;
+      s2P[i*3] = (Math.random()-0.5)*45; s2P[i*3+1] = (Math.random()-0.5)*25; s2P[i*3+2] = 15-Math.random()*100;
       s2Sz[i] = 2+Math.random()*4; s2Ph[i] = Math.random()*Math.PI*2;
       const h = Math.random();
       if (h > 0.7) { s2Col[i*3]=1;s2Col[i*3+1]=0.6;s2Col[i*3+2]=0.3; }
@@ -1569,7 +1569,7 @@ function SpaceGallery() {
       const hue = Math.random();
       const m = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue,0.3,0.45), transparent: true, opacity: 0.12+Math.random()*0.08, blending: THREE.AdditiveBlending, depthWrite: false });
       const mesh = new THREE.Mesh(g, m);
-      mesh.position.set((Math.random()-0.5)*25,(Math.random()-0.5)*15,15-Math.random()*130);
+      mesh.position.set((Math.random()-0.5)*20,(Math.random()-0.5)*12,15-Math.random()*95);
       mesh.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);
       scene.add(mesh);
       crystals.push({ mesh, rx:(Math.random()-0.5)*0.3, ry:(Math.random()-0.5)*0.4, rz:(Math.random()-0.5)*0.2, bob:Math.random()*Math.PI*2, bobSpd:0.2+Math.random()*0.3 });
@@ -1587,7 +1587,7 @@ function SpaceGallery() {
 
     // Ambient particles
     const APN = isMob?400:800; const apP = new Float32Array(APN*3);
-    for(let i=0;i<APN;i++){apP[i*3]=(Math.random()-0.5)*30;apP[i*3+1]=(Math.random()-0.5)*16;apP[i*3+2]=18-Math.random()*140;}
+    for(let i=0;i<APN;i++){apP[i*3]=(Math.random()-0.5)*25;apP[i*3+1]=(Math.random()-0.5)*14;apP[i*3+2]=18-Math.random()*100;}
     const apG = new THREE.BufferGeometry(); apG.setAttribute('position', new THREE.BufferAttribute(apP, 3));
     scene.add(new THREE.Points(apG, new THREE.PointsMaterial({color:0x334455,size:0.015,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true})));
 
@@ -1597,9 +1597,9 @@ function SpaceGallery() {
 
     // Camera spline
     const splinePoints = [
-      new THREE.Vector3(0,0.5,12), new THREE.Vector3(1.5,1,0), new THREE.Vector3(2.5,0.6,-10),
-      new THREE.Vector3(1,0.8,-22), new THREE.Vector3(-1.5,1.2,-32), new THREE.Vector3(-2,0.7,-42),
-      new THREE.Vector3(1.5,0.4,-55), new THREE.Vector3(2,0.9,-65), new THREE.Vector3(-1,0.5,-75),
+      new THREE.Vector3(0,0.5,12), new THREE.Vector3(1.5,1,2), new THREE.Vector3(2,0.6,-8),
+      new THREE.Vector3(1,0.8,-18), new THREE.Vector3(-1.5,1.2,-28), new THREE.Vector3(-2,0.7,-38),
+      new THREE.Vector3(1.5,0.4,-48), new THREE.Vector3(2,0.9,-58), new THREE.Vector3(-1,0.5,-66),
       new THREE.Vector3(0,0.5,-TD),
     ];
     const camSpline = new THREE.CatmullRomCurve3(splinePoints);
@@ -1861,15 +1861,7 @@ function SpaceGallery() {
   const proj = fIdx >= 0 ? PROJECTS[fIdx] : null;
 
   return (
-    <section id="work" ref={containerRef} style={{ height: '500vh', position: 'relative', background: '#010108' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '60px 40px 30px', zIndex: 10 }}>
-        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", letterSpacing: "4px", color: "#e8622c", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
-          <span style={{ width: "40px", height: "1px", background: "#e8622c", display: "inline-block" }} /> SELECTED WORK
-        </span>
-        <h2 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(36px, 5vw, 72px)", color: "rgba(255,255,255,0.9)", margin: 0, fontWeight: 400, letterSpacing: "-2px" }}>
-          Projects that<br /><span style={{ fontStyle: "italic" }}>speak for themselves</span>
-        </h2>
-      </div>
+    <section id="work" ref={containerRef} style={{ height: '400vh', position: 'relative', background: '#010108' }}>
       <style>{`
         .sg-canvas{position:sticky;top:0;width:100%;height:100vh;z-index:0;overflow:hidden}
         .sg-ov{position:absolute;inset:0;pointer-events:none}
