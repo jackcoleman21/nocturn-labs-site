@@ -1277,6 +1277,7 @@ function SpaceGallery() {
   const doFocusRef = useRef(null);
   const doUnfocusRef = useRef(null);
   const advSRef = useRef(null);
+  const setStgRef = useRef(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1309,7 +1310,13 @@ function SpaceGallery() {
     let _focused = false, _fIdx = -1, _sStg = 0;
     let dragging = false, dragS = null;
     const dragSt = new THREE.Vector2();
-    let hovIdx = -1;
+    let hovIdx = -1, prevHovIdx = -2;
+
+    // Throttle React state updates to avoid 60fps re-renders
+    let _lastLabelIdx = -2, _lastScrollPct = -1;
+    const _tmpVec = new THREE.Vector3(); // reusable vector to reduce GC
+    const _tmpVec2 = new THREE.Vector3();
+    const _tmpEuler = new THREE.Euler();
 
     // Texture loading
     const texLoader = new THREE.TextureLoader();
@@ -1334,15 +1341,17 @@ function SpaceGallery() {
             vec2 uv=vUv;vec2 center=uv-.5;float dist=dot(center,center);
             uv=uv+center*dist*.05*uBoot;
             vec4 tex;
-            if(uHover>.01){float r=texture2D(uTex,uv+vec2(.002,0.)*uHover).r;float g=texture2D(uTex,uv).g;float b=texture2D(uTex,uv-vec2(.002,0.)*uHover).b;tex=vec4(r,g,b,1.);}
+            if(uHover>.01){float r=texture2D(uTex,uv+vec2(.003,0.)*uHover).r;float g=texture2D(uTex,uv).g;float b=texture2D(uTex,uv-vec2(.003,0.)*uHover).b;tex=vec4(r,g,b,1.);}
             else{tex=texture2D(uTex,uv);}
             float scan=sin(uv.y*400.+uTime*2.)*.5+.5;scan=mix(1.,scan,.06*uBoot);
+            float phosphor=sin(uv.x*800.)*.5+.5;phosphor=mix(1.,phosphor,.015*uBoot);
             float vig=1.-dist*1.8;vig=clamp(vig,0.,1.);
             float bootMask=smoothstep(0.,.5,uBoot);float wipe=smoothstep(0.,1.,uBoot*2.-abs(uv.y-.5)*2.);
-            vec3 darkScreen=uAccent*.02;vec3 color=mix(darkScreen,tex.rgb*scan*vig,bootMask*wipe);
-            float edge=max(abs(center.x),abs(center.y));float edgeGlow=smoothstep(.45,.5,edge)*uHover*.3;color+=uAccent*edgeGlow;
-            float flicker=1.+sin(uTime*30.+sin(uTime*7.)*3.)*.003*uBoot;color*=flicker;
-            float alpha=mix(.15,1.,uBoot*.5+uProx*.5);
+            vec3 darkScreen=uAccent*.03;vec3 color=mix(darkScreen,tex.rgb*scan*phosphor*vig,bootMask*wipe);
+            float edge=max(abs(center.x),abs(center.y));float edgeGlow=smoothstep(.45,.5,edge)*uHover*.4;color+=uAccent*edgeGlow;
+            float flicker=1.+sin(uTime*30.+sin(uTime*7.)*3.)*.004*uBoot;color*=flicker;
+            color+=uAccent*.008*uBoot;
+            float alpha=mix(.12,1.,uBoot*.5+uProx*.5);
             gl_FragColor=vec4(color,alpha);
           }
         `,
@@ -1640,6 +1649,14 @@ function SpaceGallery() {
     }
     advSRef.current = advS;
 
+    function setStgDirect(i) {
+      if (_fIdx < 0 || i < 0 || i >= GALLERY_STORIES[_fIdx].length) return;
+      _sStg = i;
+      setSStg(i);
+      setStoryContent(GALLERY_STORIES[_fIdx][i]);
+    }
+    setStgRef.current = setStgDirect;
+
     // Scroll handling (uses page scroll position relative to container)
     function handleScroll() {
       if (_focused) return;
@@ -1700,6 +1717,23 @@ function SpaceGallery() {
       if (e.key === 'Escape' && _focused) doUnfocus();
       if (_focused && (e.key === 'ArrowDown' || e.key === ' ')) { e.preventDefault(); advS(1); }
       if (_focused && e.key === 'ArrowUp') { e.preventDefault(); advS(-1); }
+      // Left/Right arrow to navigate between projects when not focused
+      if (!_focused && e.key === 'ArrowRight') {
+        let nI = -1, nD = 999;
+        for (let i = 0; i < screens.length; i++) { const d = cam.position.distanceTo(screens[i].restPos); if (d < nD) { nD = d; nI = i; } }
+        if (nI >= 0) doFocus(nI);
+      }
+    }
+
+    // Mouse wheel during focus navigates story stages
+    function handleWheel(e) {
+      if (!_focused) return;
+      e.preventDefault();
+      sAcRef.current += e.deltaY * 0.3;
+      if (Math.abs(sAcRef.current) >= 80) {
+        advS(sAcRef.current > 0 ? 1 : -1);
+        sAcRef.current = 0;
+      }
     }
 
     function handleResize() {
@@ -1717,60 +1751,76 @@ function SpaceGallery() {
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('keydown', handleKey);
     window.addEventListener('resize', handleResize);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
 
     // Animation loop
     let animId;
     function animate() {
       animId = requestAnimationFrame(animate);
       const now = performance.now()/1000; dt = Math.min(now-lastT, 0.033); lastT = now; t += dt;
-      smx += (mx-smx)*0.04; smy += (my-smy)*0.04;
-      prevSV = scrollV; scrollV += (scrollT-scrollV)*0.035; scrollVel = scrollV-prevSV;
-      setScrollPct(scrollV);
+      const dtN = dt * 60; // normalized dt (1.0 at 60fps)
+      smx += (mx-smx)*Math.min(1, 2.5*dt); smy += (my-smy)*Math.min(1, 2.5*dt);
+      prevSV = scrollV; scrollV += (scrollT-scrollV)*Math.min(1, 2.2*dt); scrollVel = scrollV-prevSV;
+
+      // Throttle scroll pct updates (only when changed meaningfully)
+      const roundedPct = Math.round(scrollV * 200) / 200;
+      if (roundedPct !== _lastScrollPct) { _lastScrollPct = roundedPct; setScrollPct(scrollV); }
 
       // Camera
+      const camLerpFactor = Math.min(1, (_focused ? 1.5 : 2.8) * dt);
       if (_focused && _fIdx >= 0) {
         const s = screens[_fIdx];
-        const fwd = new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(s.restRot.x,s.restRot.y,s.restRot.z));
-        camTP.copy(s.restPos).add(fwd.multiplyScalar(6)); camTP.x -= 1.8;
+        _tmpVec.set(0,0,1); _tmpEuler.set(s.restRot.x,s.restRot.y,s.restRot.z);
+        _tmpVec.applyEuler(_tmpEuler);
+        camTP.copy(s.restPos).add(_tmpVec.multiplyScalar(6)); camTP.x -= 1.8;
         camTL.copy(s.restPos);
       } else {
         const pt = camSpline.getPointAt(Math.min(scrollV, 0.999));
         camTP.copy(pt);
         camTL.set(camTP.x+Math.sin(scrollV*Math.PI)*2, camTP.y, camTP.z-8);
       }
-      camCP.lerp(camTP, _focused ? 0.025 : 0.045);
+      camCP.lerp(camTP, camLerpFactor);
       cam.position.copy(camCP);
-      const lt = camTL.clone(); lt.x += smx*(_focused?1.5:3.5); lt.y += smy*(_focused?1:2.5);
-      cam.lookAt(lt);
+      _tmpVec.copy(camTL); _tmpVec.x += smx*(_focused?1.5:3.5); _tmpVec.y += smy*(_focused?1:2.5);
+      cam.lookAt(_tmpVec);
 
       spawnWake(); updWake();
 
       // Raycast
       mNDC.set(rmx/W*2-1,-(rmy/H)*2+1);
       ray.setFromCamera(mNDC, cam);
-      const hits = ray.intersectObjects(screens.map(s => s.mesh));
+      const screenMeshes = screens.map(s => s.mesh);
+      const hits = ray.intersectObjects(screenMeshes);
       hovIdx = hits.length ? hits[0].object.userData.idx : -1;
+
+      // Cursor feedback on hover
+      if (hovIdx !== prevHovIdx) {
+        canvas.style.cursor = hovIdx >= 0 && !_focused ? 'pointer' : 'default';
+        prevHovIdx = hovIdx;
+      }
 
       // Screens
       const SP=14,DA=5,RSP=10,RDA=4;
       for (let i = 0; i < screens.length; i++) {
         const s = screens[i];
         s.prox = Math.max(0, 1-cam.position.distanceTo(s.restPos)/14);
-        s.hover += ((hovIdx===i&&!_focused?1:0)-s.hover)*0.08;
+        const hoverRate = Math.min(1, 5*dt);
+        s.hover += ((hovIdx===i&&!_focused?1:0)-s.hover)*hoverRate;
         const bootTarget = s.prox > 0.15 ? 1 : 0;
-        s.boot += (bootTarget-s.boot)*0.02;
+        s.boot += (bootTarget-s.boot)*Math.min(1, 1.2*dt);
 
-        let tP = s.restPos.clone(), tRx = s.restRot.x, tRy = s.restRot.y, tRz = s.restRot.z;
+        _tmpVec.copy(s.restPos);
+        let tRx = s.restRot.x, tRy = s.restRot.y, tRz = s.restRot.z;
         if (dragging && dragS === s) {
-          const pd = new THREE.Vector3().subVectors(cam.position, s.restPos).normalize();
-          tP.add(pd.multiplyScalar(2)); tRy = s.restRot.y+(mx-dragSt.x)*2; tRx = s.restRot.x-(my-dragSt.y)*1.5;
+          _tmpVec2.subVectors(cam.position, s.restPos).normalize();
+          _tmpVec.add(_tmpVec2.multiplyScalar(2)); tRy = s.restRot.y+(mx-dragSt.x)*2; tRx = s.restRot.x-(my-dragSt.y)*1.5;
         } else if (hovIdx===i && !_focused) {
-          if (hits.length) tP.lerp(hits[0].point, 0.2);
-          const tc = new THREE.Vector3().subVectors(cam.position, s.restPos).normalize();
-          tRy = s.restRot.y+tc.x*0.2; tRx = s.restRot.x+tc.y*0.12;
+          if (hits.length) _tmpVec.lerp(hits[0].point, 0.2);
+          _tmpVec2.subVectors(cam.position, s.restPos).normalize();
+          tRy = s.restRot.y+_tmpVec2.x*0.2; tRx = s.restRot.x+_tmpVec2.y*0.12;
         } else if (s.prox > 0.1 && !_focused) {
-          const tc = new THREE.Vector3().subVectors(cam.position, s.restPos).normalize();
-          tRy = s.restRot.y+tc.x*s.prox*0.12;
+          _tmpVec2.subVectors(cam.position, s.restPos).normalize();
+          tRy = s.restRot.y+_tmpVec2.x*s.prox*0.12;
         }
 
         // Chain reaction
@@ -1780,9 +1830,9 @@ function SpaceGallery() {
           if (d < 10) { const inf = screens[j].vel.length()*0.04*(1-d/10); s.vel.x += screens[j].vel.x*inf; s.vel.y += screens[j].vel.y*inf; }
         }
 
-        s.vel.x += ((tP.x-s.pos.x)*SP-s.vel.x*DA)*dt;
-        s.vel.y += ((tP.y-s.pos.y)*SP-s.vel.y*DA)*dt;
-        s.vel.z += ((tP.z-s.pos.z)*SP-s.vel.z*DA)*dt;
+        s.vel.x += ((_tmpVec.x-s.pos.x)*SP-s.vel.x*DA)*dt;
+        s.vel.y += ((_tmpVec.y-s.pos.y)*SP-s.vel.y*DA)*dt;
+        s.vel.z += ((_tmpVec.z-s.pos.z)*SP-s.vel.z*DA)*dt;
         s.pos.x += s.vel.x*dt; s.pos.y += s.vel.y*dt; s.pos.z += s.vel.z*dt;
         s.angVel.x += ((tRx-s.rot.x)*RSP-s.angVel.x*RDA)*dt;
         s.angVel.y += ((tRy-s.rot.y)*RSP-s.angVel.y*RDA)*dt;
@@ -1795,23 +1845,28 @@ function SpaceGallery() {
         s.mat.uniforms.uBoot.value = s.boot;
         s.mat.uniforms.uHover.value = s.hover;
         s.mat.uniforms.uProx.value = s.prox;
-        s.edges.forEach(e => { e.material.opacity = s.hover*0.4+s.prox*0.15+s.boot*0.05; });
-        s.pl.intensity = s.prox*0.5+s.hover*0.7+s.boot*0.15;
-        s.refMat.opacity = 0.02+s.boot*0.03+s.hover*0.02;
+        // Breathing glow on edges when screen is booted
+        const breathe = Math.sin(t*1.2+i*1.5)*0.05+0.05;
+        s.edges.forEach(e => { e.material.opacity = s.hover*0.5+s.prox*0.18+s.boot*breathe; });
+        s.pl.intensity = s.prox*0.5+s.hover*0.8+s.boot*0.2;
+        s.refMat.opacity = 0.02+s.boot*0.04+s.hover*0.03;
 
         if (_focused) {
-          if (i===_fIdx) { s.mat.uniforms.uProx.value = 1; }
-          else { s.mat.uniforms.uBoot.value *= 0.15; }
+          if (i===_fIdx) { s.mat.uniforms.uProx.value = 1; s.pl.intensity = 1.2; }
+          else { s.mat.uniforms.uBoot.value *= 0.15; s.pl.intensity *= 0.15; }
         }
       }
 
-      // Label
+      // Label — only update React state when nearest screen changes
       let nI=-1, nD=999;
       if (!_focused) for (let i=0;i<screens.length;i++) { const d=cam.position.distanceTo(screens[i].restPos); if(d<nD&&d<12){nD=d;nI=i;} }
-      if (nI >= 0 && !_focused) {
-        setLabelVisible(true); setLabelName(PROJECTS[nI].fullTitle||PROJECTS[nI].title); setLabelTags(PROJECTS[nI].category);
-        setHudNum(String(nI+1).padStart(2,'0'));
-      } else if (!_focused) { setLabelVisible(false); }
+      if (nI !== _lastLabelIdx) {
+        _lastLabelIdx = nI;
+        if (nI >= 0 && !_focused) {
+          setLabelVisible(true); setLabelName(PROJECTS[nI].fullTitle||PROJECTS[nI].title); setLabelTags(PROJECTS[nI].category);
+          setHudNum(String(nI+1).padStart(2,'0'));
+        } else if (!_focused) { setLabelVisible(false); }
+      }
 
       // Stars twinkle
       const sa1 = s1G.attributes.size;
@@ -1845,6 +1900,8 @@ function SpaceGallery() {
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('wheel', handleWheel);
+      canvas.style.cursor = 'default';
       renderer.dispose();
       scene.traverse(obj => {
         if (obj.geometry) obj.geometry.dispose();
@@ -1862,6 +1919,10 @@ function SpaceGallery() {
 
   return (
     <section id="work" ref={containerRef} style={{ height: '400vh', position: 'relative', background: '#010108' }}>
+      {/* Top gradient blend from previous section */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '150px', background: 'linear-gradient(to bottom, #080812, #010108)', zIndex: 1, pointerEvents: 'none' }} />
+      {/* Bottom gradient blend into next section */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '150px', background: 'linear-gradient(to top, #080812, #010108)', zIndex: 1, pointerEvents: 'none' }} />
       <style>{`
         .sg-canvas{position:sticky;top:0;width:100%;height:100vh;z-index:0;overflow:hidden}
         .sg-ov{position:absolute;inset:0;pointer-events:none}
@@ -1872,9 +1933,12 @@ function SpaceGallery() {
         .sg-plbl-n{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:italic;font-size:clamp(1.8rem,3.5vw,2.8rem);letter-spacing:-.02em;text-shadow:0 0 50px rgba(1,1,8,1),0 0 100px rgba(1,1,8,.7)}
         .sg-plbl-t{font-family:'DM Sans',sans-serif;font-weight:300;font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:rgba(237,232,224,.55);margin-top:.5rem}
         .sg-plbl-h{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.18);margin-top:.8rem}
-        .sg-dbar{position:absolute;right:2rem;top:50%;transform:translateY(-50%);width:1px;height:28vh;background:rgba(255,255,255,.04);z-index:4}
-        .sg-dpip{position:absolute;left:-3px;width:7px;height:7px;border-radius:50%;border:1px solid rgba(237,232,224,.2);background:rgba(237,232,224,.06);transition:top .4s cubic-bezier(.22,1,.36,1)}
-        .sg-hint{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.15);z-index:4;transition:opacity .5s}
+        .sg-dbar{position:absolute;right:2rem;top:50%;transform:translateY(-50%);width:1px;height:28vh;background:rgba(255,255,255,.04);z-index:4;transition:opacity .6s}
+        .sg-dpip{position:absolute;left:-3px;width:7px;height:7px;border-radius:50%;border:1px solid rgba(237,232,224,.25);background:rgba(237,232,224,.1);transition:top .4s cubic-bezier(.22,1,.36,1);box-shadow:0 0 6px rgba(237,232,224,.1)}
+        .sg-dmark:hover div{opacity:1!important}
+        .sg-hint{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.2);z-index:4;transition:opacity .5s;display:flex;flex-direction:column;align-items:center;gap:8px}
+        .sg-hint-arrow{width:1px;height:24px;background:linear-gradient(to bottom,transparent,rgba(237,232,224,.15));position:relative;animation:sg-bob 2s ease-in-out infinite}
+        @keyframes sg-bob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(6px);opacity:1}}
         .sg-xbtn{position:absolute;top:24px;right:24px;z-index:10;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .5s cubic-bezier(.22,1,.36,1)}
         .sg-xbtn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25)}
         .sg-xbtn::before,.sg-xbtn::after{content:'';position:absolute;top:50%;left:50%;width:15px;height:1.5px;background:#ede8e0;transform-origin:center}
@@ -1913,9 +1977,11 @@ function SpaceGallery() {
       <div className="sg-canvas">
         <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
 
-        {/* Overlays */}
+        {/* Overlays — vignette intensifies with scroll speed */}
         <div className="sg-ov" style={{ zIndex: 1, background: 'radial-gradient(ellipse at 50% 50%,transparent 10%,rgba(1,1,8,.1) 30%,rgba(1,1,8,.4) 60%,rgba(1,1,8,.8) 100%)' }} />
         <div className="sg-ov" style={{ zIndex: 2, opacity: 0.03, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px)" }} />
+        {/* Speed lines overlay — visible during fast scroll */}
+        <div className="sg-ov" style={{ zIndex: 1, background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(1,1,8,0.5) 100%)', opacity: Math.min(1, Math.abs(scrollPct) * 0.3), transition: 'opacity 0.3s', pointerEvents: 'none' }} />
 
         {/* HUD */}
         <div className="sg-hud">
@@ -1930,14 +1996,32 @@ function SpaceGallery() {
           <div className="sg-plbl-h">Click to explore · Drag to rotate</div>
         </div>
 
-        {/* Depth Bar */}
-        <div className="sg-dbar">
+        {/* Depth Bar with project markers */}
+        <div className="sg-dbar" style={{ opacity: focused ? 0.2 : 1, transition: 'opacity 0.6s' }}>
+          {GALLERY_POSITIONS.map((gp, i) => {
+            const projZ = gp.pos[2];
+            const pct = Math.max(0, Math.min(1, (12 - projZ) / (12 + 72)));
+            return (
+              <div key={i} className="sg-dmark" style={{ position: 'absolute', left: '-5px', top: `${pct * 100}%`, cursor: 'pointer', padding: '4px' }}
+                title={PROJECTS[i].title}
+                onClick={() => {
+                  const sectionEl = containerRef.current;
+                  if (!sectionEl) return;
+                  const sectionH = sectionEl.offsetHeight - window.innerHeight;
+                  const targetScroll = sectionEl.offsetTop + pct * sectionH;
+                  window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                }}>
+                <div style={{ width: '11px', height: '2px', background: GALLERY_ACCENTS[i], opacity: Math.abs(scrollPct - pct) < 0.08 ? 0.9 : 0.25, transition: 'opacity 0.4s' }} />
+              </div>
+            );
+          })}
           <div className="sg-dpip" style={{ top: `${scrollPct * 100}%` }} />
         </div>
 
         {/* Scroll Hint */}
         <div className="sg-hint" style={{ opacity: scrollPct > 0.02 || focused ? 0 : 1 }}>
-          ↓ Scroll to fly through ↓
+          <span>Scroll to explore</span>
+          <div className="sg-hint-arrow" />
         </div>
 
         {/* Close Button */}
@@ -1969,13 +2053,8 @@ function SpaceGallery() {
               <button key={i} className={`sg-sdot ${i === sStg ? 'active' : ''}`}
                 style={{ background: i === sStg ? accentColor : undefined }}
                 onClick={() => {
-                  if (!sLkRef.current && i !== sStg && fIdx >= 0) {
-                    setSStg(i);
-                    setStoryContent(GALLERY_STORIES[fIdx][i]);
-                    // sync internal state
-                    if (advSRef.current) {
-                      // direct set instead of advS to avoid bounds check
-                    }
+                  if (!sLkRef.current && i !== sStg && fIdx >= 0 && setStgRef.current) {
+                    setStgRef.current(i);
                   }
                 }} />
             ))}
