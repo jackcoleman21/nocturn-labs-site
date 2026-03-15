@@ -2047,6 +2047,7 @@ function SpaceGallery() {
 
     function handleMouseDown(e) {
       if (_focused || e.target.closest('.sg-ui')) return;
+      if (!container.contains(e.target)) return;
       const clickIdx = hovIdx >= 0 ? hovIdx : _stopIdx;
       if (clickIdx >= 0) { dragging = true; dragS = screens[clickIdx]; dragSt.set(mx, my); }
     }
@@ -2060,7 +2061,9 @@ function SpaceGallery() {
 
     // Touch
     let touchStartY = 0, touchMoved = false, touchStartTime = 0;
+    let touchInsideGallery = false;
     function handleTouchStart(e) {
+      touchInsideGallery = container.contains(e.target);
       touchStartY = e.touches[0].clientY;
       touchStartTime = Date.now();
       touchMoved = false;
@@ -2081,6 +2084,7 @@ function SpaceGallery() {
       }
     }
     function handleTouchEnd() {
+      if (!touchInsideGallery) return;
       const elapsed = Date.now() - touchStartTime;
       const tapIdx = hovIdx >= 0 ? hovIdx : _stopIdx;
       if (!touchMoved && elapsed < 300 && tapIdx >= 0 && !_focused) doFocus(tapIdx);
