@@ -55,13 +55,17 @@ function useScrollReveal() {
 function useScrollProgress(ref) {
   const [progress, setProgress] = useState(0);
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false, lastP = -1;
+    const update = () => {
+      ticking = false;
       if (!ref.current) return;
       const rect = ref.current.getBoundingClientRect();
       const viewH = window.innerHeight;
       const p = Math.max(0, Math.min(1, (viewH - rect.top) / (viewH + rect.height)));
-      setProgress(p);
+      const rounded = Math.round(p * 100) / 100;
+      if (rounded !== lastP) { lastP = rounded; setProgress(p); }
     };
+    const handleScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
@@ -445,6 +449,11 @@ fc=vec4(c*v,1);}`;
     const ambientInterval = setInterval(randomSplats, 5000);
 
     const onMouseMove = (e) => {
+      // Suppress fluid trail inside the AI chat box
+      if (e.target && e.target.closest && e.target.closest('[data-no-fluid]')) {
+        pointer.moved = false;
+        return;
+      }
       pointer.px = pointer.x; pointer.py = pointer.y;
       pointer.x = e.clientX / W; pointer.y = 1 - e.clientY / H;
       pointer.dx = (pointer.x - pointer.px) * W; pointer.dy = (pointer.y - pointer.py) * H;
@@ -467,7 +476,10 @@ fc=vec4(c*v,1);}`;
     let fluidVisible = true;
     const fluidObs = new IntersectionObserver(([entry]) => {
       fluidVisible = entry.isIntersecting;
-      if (fluidVisible && !animId) animate();
+      if (fluidVisible && !animId) {
+        lastTime = performance.now();
+        animId = requestAnimationFrame(animate);
+      }
     }, { rootMargin: '100px' });
     fluidObs.observe(canvas);
 
@@ -515,13 +527,95 @@ fc=vec4(c*v,1);}`;
 // ═══════════════════════════════════════════
 // LOADING OVERLAY
 // ═══════════════════════════════════════════
+function LoadingParticles({ pct }) {
+  const canvasRef = useRef(null);
+  const particlesRef = useRef([]);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const resize = () => {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    // Init particles
+    const count = 80;
+    particlesRef.current = Array.from({ length: count }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.4 + 0.1,
+      pulse: Math.random() * Math.PI * 2,
+    }));
+
+    const draw = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      ctx.clearRect(0, 0, w, h);
+      const particles = particlesRef.current;
+
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.pulse += 0.015;
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+
+        const glow = Math.sin(p.pulse) * 0.3 + 0.7;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(232, 98, 44, ${p.alpha * glow})`;
+        ctx.fill();
+      });
+
+      // Draw connections between nearby particles
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(232, 98, 44, ${0.06 * (1 - dist / 120)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(draw);
+    };
+    rafRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: Math.min(pct / 30, 1) * 0.6, transition: "opacity 0.5s ease" }} />;
+}
+
 function LoadingOverlay({ onComplete }) {
   const [phase, setPhase] = useState("loading");
   const [pct, setPct] = useState(0);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    const duration = 2200;
+    const duration = 2600;
     const start = performance.now();
     const tick = (now) => {
       const elapsed = Math.min((now - start) / duration, 1);
@@ -530,48 +624,228 @@ function LoadingOverlay({ onComplete }) {
       if (elapsed < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-    const t1 = setTimeout(() => setPhase("revealing"), 2400);
-    const t2 = setTimeout(() => { setPhase("done"); document.body.style.overflow = ""; onComplete(); }, 3200);
+    const t1 = setTimeout(() => setPhase("revealing"), 2800);
+    const t2 = setTimeout(() => { setPhase("done"); document.body.style.overflow = ""; onComplete(); }, 3800);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   if (phase === "done") return null;
 
   const digits = String(pct).padStart(3, "0").split("");
+  const isRevealing = phase === "revealing";
+
+  // Circular arc progress
+  const arcRadius = 52;
+  const arcCirc = 2 * Math.PI * arcRadius;
+  const arcOffset = arcCirc - (pct / 100) * arcCirc;
+
+  // Staggered letter reveal for brand name
+  const brandLetters = "NOCTURN LABS".split("");
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "#000", pointerEvents: "none", opacity: phase === "revealing" ? 0 : 1, transform: phase === "revealing" ? "translateY(-100%)" : "translateY(0)", transition: phase === "revealing" ? "opacity 0.6s cubic-bezier(0.76, 0, 0.24, 1), transform 0.8s cubic-bezier(0.76, 0, 0.24, 1) 0.1s" : "none" }}>
-      {/* Center logo + progress bar */}
-      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "32px" }}>
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: "14px", opacity: pct > 15 ? 1 : 0, transform: pct > 15 ? "translateY(0) scale(1)" : "translateY(10px) scale(0.95)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}>
-          <img src="/nocturn-logo.webp" alt="Nocturn Labs" style={{ width: "48px", height: "48px", objectFit: "contain", filter: pct >= 100 ? "drop-shadow(0 0 16px rgba(240,148,58,0.5))" : "drop-shadow(0 0 8px rgba(240,148,58,0.25))", transition: "filter 0.6s ease" }} />
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "24px", fontWeight: 800, color: "#fff", letterSpacing: "0.5px" }}>Nocturn Labs</span>
-        </div>
-        {/* Progress bar */}
-        <div style={{ width: "120px", height: "2px", background: "rgba(255,255,255,0.1)", borderRadius: "1px", overflow: "hidden" }}>
-          <div style={{ width: `${pct}%`, height: "100%", background: "#fff", borderRadius: "1px", transition: "width 0.15s ease-out" }} />
-        </div>
+    <>
+      {/* Split curtain - top half */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, height: "50%", zIndex: 10001,
+        background: "#050508",
+        transform: isRevealing ? "translateY(-100%)" : "translateY(0)",
+        transition: isRevealing ? "transform 0.9s cubic-bezier(0.76, 0, 0.24, 1)" : "none",
+      }}>
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "1px", background: "linear-gradient(90deg, transparent, rgba(232,98,44,0.4), transparent)", opacity: isRevealing ? 0 : 1, transition: "opacity 0.3s ease" }} />
       </div>
-      {/* Rolling odometer — bottom left */}
-      <div style={{ position: "absolute", bottom: "40px", left: "48px", display: "flex", gap: "0", overflow: "hidden", height: "120px" }}>
-        {digits.map((d, i) => (
-          <div key={i} style={{ width: "72px", height: "120px", overflow: "hidden", position: "relative" }}>
-            <div style={{ display: "flex", flexDirection: "column", transform: `translateY(${-parseInt(d) * 120}px)`, transition: "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)" }}>
-              {[0,1,2,3,4,5,6,7,8,9].map(n => (
-                <span key={n} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "120px", fontWeight: 200, lineHeight: "120px", height: "120px", display: "block", color: "rgba(255,255,255,0.6)", letterSpacing: "-4px", fontVariantNumeric: "tabular-nums" }}>{n}</span>
-              ))}
-            </div>
+      {/* Split curtain - bottom half */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, height: "50%", zIndex: 10001,
+        background: "#050508",
+        transform: isRevealing ? "translateY(100%)" : "translateY(0)",
+        transition: isRevealing ? "transform 0.9s cubic-bezier(0.76, 0, 0.24, 1)" : "none",
+      }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", background: "linear-gradient(90deg, transparent, rgba(232,98,44,0.4), transparent)", opacity: isRevealing ? 0 : 1, transition: "opacity 0.3s ease" }} />
+      </div>
+      {/* Main overlay content */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 10002, pointerEvents: "none",
+        opacity: isRevealing ? 0 : 1,
+        transition: isRevealing ? "opacity 0.5s cubic-bezier(0.76, 0, 0.24, 1)" : "none",
+      }}>
+        {/* Particle field */}
+        <LoadingParticles pct={pct} />
+
+        {/* Subtle radial glow behind center */}
+        <div style={{
+          position: "absolute", top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "500px", height: "500px",
+          background: `radial-gradient(circle, rgba(232,98,44,${pct >= 100 ? 0.12 : 0.05}) 0%, transparent 70%)`,
+          transition: "background 0.8s ease",
+          filter: "blur(40px)",
+        }} />
+
+        {/* Center logo with orbital ring */}
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "28px" }}>
+          {/* Orbital ring + logo */}
+          <div style={{ position: "relative", width: "120px", height: "120px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {/* SVG arc progress ring */}
+            <svg width="120" height="120" style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)" }}>
+              {/* Track */}
+              <circle cx="60" cy="60" r={arcRadius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+              {/* Progress arc */}
+              <circle cx="60" cy="60" r={arcRadius} fill="none"
+                stroke="url(#arcGrad)" strokeWidth="1.5"
+                strokeDasharray={arcCirc} strokeDashoffset={arcOffset}
+                strokeLinecap="round"
+                style={{ transition: "stroke-dashoffset 0.2s ease-out", filter: "drop-shadow(0 0 6px rgba(232,98,44,0.5))" }}
+              />
+              {/* Dot at progress tip */}
+              <circle cx="60" cy="60" r={arcRadius} fill="none"
+                stroke="transparent" strokeWidth="0"
+              />
+              <defs>
+                <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#e8622c" />
+                  <stop offset="100%" stopColor="#f0943a" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            {/* Rotating outer dashed ring */}
+            <svg width="120" height="120" style={{
+              position: "absolute", top: 0, left: 0,
+              animation: "loaderSpin 12s linear infinite",
+            }}>
+              <circle cx="60" cy="60" r="58" fill="none"
+                stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"
+                strokeDasharray="4 8"
+              />
+            </svg>
+
+            {/* Logo */}
+            <img src="/nocturn-logo.webp" alt="Nocturn Labs" style={{
+              width: "44px", height: "44px", objectFit: "contain",
+              opacity: pct > 5 ? 1 : 0,
+              transform: pct > 5 ? "scale(1)" : "scale(0.7)",
+              transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              filter: pct >= 100
+                ? "drop-shadow(0 0 20px rgba(232,98,44,0.6)) drop-shadow(0 0 40px rgba(232,98,44,0.3))"
+                : "drop-shadow(0 0 8px rgba(232,98,44,0.25))",
+            }} />
           </div>
+
+          {/* Staggered brand name */}
+          <div style={{ display: "flex", gap: "2px", overflow: "hidden" }}>
+            {brandLetters.map((char, i) => (
+              <span key={i} style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "13px",
+                fontWeight: 700,
+                letterSpacing: "4px",
+                color: char === " " ? "transparent" : "rgba(255,255,255,0.8)",
+                opacity: pct > 10 + i * 3 ? 1 : 0,
+                transform: pct > 10 + i * 3 ? "translateY(0)" : "translateY(12px)",
+                transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.03}s`,
+                width: char === " " ? "8px" : "auto",
+              }}>
+                {char}
+              </span>
+            ))}
+          </div>
+
+          {/* Tagline that fades in */}
+          <div style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: "11px",
+            letterSpacing: "3px",
+            color: "rgba(255,255,255,0.2)",
+            textTransform: "uppercase",
+            opacity: pct > 50 ? 1 : 0,
+            transform: pct > 50 ? "translateY(0)" : "translateY(8px)",
+            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            marginTop: "-12px",
+          }}>
+            Digital Studio
+          </div>
+        </div>
+
+        {/* Rolling odometer — bottom left */}
+        <div style={{ position: "absolute", bottom: "40px", left: "48px", display: "flex", gap: "0", overflow: "hidden", height: "100px" }}>
+          {digits.map((d, i) => (
+            <div key={i} style={{ width: "60px", height: "100px", overflow: "hidden", position: "relative" }}>
+              <div style={{ display: "flex", flexDirection: "column", transform: `translateY(${-parseInt(d) * 100}px)`, transition: "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+                {[0,1,2,3,4,5,6,7,8,9].map(n => (
+                  <span key={n} style={{
+                    fontFamily: "'DM Sans', sans-serif", fontSize: "100px", fontWeight: 200,
+                    lineHeight: "100px", height: "100px", display: "block",
+                    color: pct >= 100 ? "rgba(232,98,44,0.5)" : "rgba(255,255,255,0.4)",
+                    letterSpacing: "-3px", fontVariantNumeric: "tabular-nums",
+                    transition: "color 0.6s ease",
+                  }}>{n}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+          {/* Percent symbol */}
+          <span style={{
+            fontFamily: "'DM Sans', sans-serif", fontSize: "24px", fontWeight: 300,
+            color: "rgba(255,255,255,0.15)", lineHeight: "100px",
+            marginLeft: "4px", alignSelf: "flex-end",
+          }}>%</span>
+        </div>
+
+        {/* Corner frame marks with extended lines */}
+        {[
+          { top: "24px", left: "24px", borderTop: "1px solid rgba(255,255,255,0.1)", borderLeft: "1px solid rgba(255,255,255,0.1)" },
+          { top: "24px", right: "24px", borderTop: "1px solid rgba(255,255,255,0.1)", borderRight: "1px solid rgba(255,255,255,0.1)" },
+          { bottom: "24px", left: "24px", borderBottom: "1px solid rgba(255,255,255,0.1)", borderLeft: "1px solid rgba(255,255,255,0.1)" },
+          { bottom: "24px", right: "24px", borderBottom: "1px solid rgba(255,255,255,0.1)", borderRight: "1px solid rgba(255,255,255,0.1)" },
+        ].map((style, i) => (
+          <div key={i} style={{
+            position: "absolute", width: "40px", height: "40px", ...style,
+            opacity: pct > 5 ? 1 : 0,
+            transition: `opacity 0.6s ease ${i * 0.1}s`,
+          }} />
         ))}
+
+        {/* Status text — top right */}
+        <div style={{
+          position: "absolute", top: "32px", right: "72px",
+          display: "flex", alignItems: "center", gap: "8px",
+        }}>
+          <div style={{
+            width: "6px", height: "6px", borderRadius: "50%",
+            background: pct >= 100 ? "#4ade80" : "#e8622c",
+            boxShadow: pct >= 100 ? "0 0 8px rgba(74,222,128,0.5)" : "0 0 8px rgba(232,98,44,0.4)",
+            animation: pct < 100 ? "pulse 1.5s ease-in-out infinite" : "none",
+            transition: "background 0.3s, box-shadow 0.3s",
+          }} />
+          <span style={{
+            fontFamily: "'DM Sans', sans-serif", fontSize: "11px",
+            letterSpacing: "3px", color: "rgba(255,255,255,0.25)",
+            textTransform: "uppercase",
+          }}>
+            {pct >= 100 ? "Ready" : "Loading"}
+          </span>
+        </div>
+
+        {/* Bottom right — year stamp */}
+        <div style={{
+          position: "absolute", bottom: "44px", right: "48px",
+          fontFamily: "'DM Sans', sans-serif", fontSize: "11px",
+          letterSpacing: "3px", color: "rgba(255,255,255,0.12)",
+          textTransform: "uppercase",
+          opacity: pct > 20 ? 1 : 0,
+          transition: "opacity 0.8s ease",
+        }}>
+          &copy; 2026
+        </div>
+
+        {/* Horizontal scan line effect */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px)",
+          pointerEvents: "none",
+        }} />
       </div>
-      {/* Corner frame marks */}
-      <div style={{ position: "absolute", top: "24px", left: "24px", width: "30px", height: "30px", borderTop: "1px solid rgba(255,255,255,0.12)", borderLeft: "1px solid rgba(255,255,255,0.12)" }} />
-      <div style={{ position: "absolute", top: "24px", right: "24px", width: "30px", height: "30px", borderTop: "1px solid rgba(255,255,255,0.12)", borderRight: "1px solid rgba(255,255,255,0.12)" }} />
-      <div style={{ position: "absolute", bottom: "24px", right: "24px", width: "30px", height: "30px", borderBottom: "1px solid rgba(255,255,255,0.12)", borderRight: "1px solid rgba(255,255,255,0.12)" }} />
-      {/* "Loading" label — top right */}
-      <div style={{ position: "absolute", top: "32px", right: "64px", fontFamily: "'DM Sans', sans-serif", fontSize: "11px", letterSpacing: "4px", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>Loading</div>
-    </div>
+    </>
   );
 }
 
@@ -653,7 +927,7 @@ function Navbar({ scrolled, activeNav }) {
   return (
     <>
       <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, padding: isMobile ? "16px 20px" : "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: "none", transition: "all 0.5s" }}>
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, padding: isMobile ? "16px 20px" : "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: scrolled ? "rgba(8,8,18,0.85)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: "none", transition: "background 0.5s, backdrop-filter 0.5s" }}>
         <a href="#top" className="nav-logo-link" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
           <img src="/nocturn-logo.webp" alt="Nocturn Labs" className="nav-logo-icon" style={{ width: "40px", height: "40px", objectFit: "contain", filter: "drop-shadow(0 0 8px rgba(240,148,58,0.35))", transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }} />
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "20px", fontWeight: 900, color: "#ffffff", letterSpacing: "0.5px" }}>Nocturn Labs</span>
@@ -956,7 +1230,7 @@ function HeroVisual() {
     let isVisible = true;
     const observer = new IntersectionObserver(([entry]) => {
       isVisible = entry.isIntersecting;
-      if (isVisible && !animId) animate();
+      if (isVisible && !animId) animId = requestAnimationFrame(animate);
     }, { threshold: 0 });
     observer.observe(container);
 
@@ -1172,7 +1446,6 @@ function Marquee() {
 
 function PhilosophyStrip() {
   const sectionRef = useRef(null);
-  const progress = useScrollProgress(sectionRef);
   const beliefs = [
     { num: "01", headline: "Design is leverage.", body: "A single page, built right, outperforms a team of ten. We build that page." },
     { num: "02", headline: "We engineer perception.", body: "We don't decorate. Every font, every whitespace, every animation is a conversion mechanism." },
@@ -1195,19 +1468,16 @@ function PhilosophyStrip() {
         {/* Beliefs grid */}
         <div className="philosophy-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0" }}>
           {beliefs.map((b, i) => {
-            const colStart = i / 3;
-            const colEnd = (i + 1) / 3;
-            const colProgress = Math.max(0, Math.min(1, (progress - colStart) / (colEnd - colStart)));
             return (
               <div key={i} style={{ padding: "clamp(24px, 3vw, 48px)", position: "relative", borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
                 {/* Number */}
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(48px, 6vw, 72px)", fontWeight: 800, letterSpacing: "-2px", lineHeight: 1, display: "inline-block", marginBottom: "24px", backgroundImage: `linear-gradient(180deg, rgba(255,255,255,${0.35 + colProgress * 0.25}) 0%, rgba(232,98,44,${0.35 + colProgress * 0.45}) 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" }}>{b.num}</span>
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(48px, 6vw, 72px)", fontWeight: 800, letterSpacing: "-2px", lineHeight: 1, display: "inline-block", marginBottom: "24px", backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(232,98,44,1) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" }}>{b.num}</span>
                 {/* Headline */}
-                <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(22px, 2.5vw, 32px)", color: `rgba(255,255,255,${0.6 + colProgress * 0.35})`, margin: "0 0 16px", fontWeight: 400, lineHeight: 1.2, transition: "color 0.5s ease", letterSpacing: "-0.5px" }}>{b.headline}</h3>
+                <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(22px, 2.5vw, 32px)", color: "rgba(255,255,255,0.95)", margin: "0 0 16px", fontWeight: 400, lineHeight: 1.2, letterSpacing: "-0.5px" }}>{b.headline}</h3>
                 {/* Divider */}
-                <div style={{ width: "40px", height: "2px", background: "#e8622c", marginBottom: "16px", opacity: 0.5 + colProgress * 0.5, transition: "opacity 0.6s" }} />
+                <div style={{ width: "40px", height: "2px", background: "#e8622c", marginBottom: "16px" }} />
                 {/* Body */}
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", lineHeight: 1.8, margin: 0, color: `rgba(255,255,255,${0.4 + colProgress * 0.3})`, transition: "color 0.5s ease" }}>{b.body}</p>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", lineHeight: 1.8, margin: 0, color: "rgba(255,255,255,0.85)" }}>{b.body}</p>
               </div>
             );
           })}
@@ -1543,7 +1813,7 @@ function SpaceGallery() {
     const startLook = new THREE.Vector3(0, 0.5, 4);
 
     // Stars layer 1
-    const S1N = isMob ? 2000 : 4000;
+    const S1N = isMob ? 3000 : 6000;
     const s1P = new Float32Array(S1N * 3), s1Sz = new Float32Array(S1N), s1Ph = new Float32Array(S1N), s1Col = new Float32Array(S1N * 3);
     for (let i = 0; i < S1N; i++) {
       s1P[i*3] = (Math.random()-0.5)*50; s1P[i*3+1] = (Math.random()-0.5)*30; s1P[i*3+2] = 20-Math.random()*110;
@@ -1560,8 +1830,8 @@ function SpaceGallery() {
     const s1Mesh = new THREE.Points(s1G, new THREE.PointsMaterial({ size: 0.06, vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, fog: false }));
     s1Mesh.renderOrder = -100; scene.add(s1Mesh);
 
-    // Stars layer 2
-    const S2N = isMob ? 150 : 300;
+    // Stars layer 2 — brighter accent stars
+    const S2N = isMob ? 200 : 500;
     const s2P = new Float32Array(S2N*3), s2Sz = new Float32Array(S2N), s2Ph = new Float32Array(S2N), s2Col = new Float32Array(S2N*3);
     for (let i = 0; i < S2N; i++) {
       s2P[i*3] = (Math.random()-0.5)*45; s2P[i*3+1] = (Math.random()-0.5)*25; s2P[i*3+2] = 15-Math.random()*100;
@@ -1578,61 +1848,20 @@ function SpaceGallery() {
     const s2Mesh = new THREE.Points(s2G, new THREE.PointsMaterial({ size: 0.15, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, fog: false }));
     s2Mesh.renderOrder = -99; scene.add(s2Mesh);
 
-    // Constellation lines
-    const constellations = [];
-    if (!isMob) {
-      const used = new Set();
-      for (let i = 0; i < S2N && constellations.length < 15; i++) {
-        if (used.has(i)) continue;
-        const x1 = s2P[i*3], y1 = s2P[i*3+1], z1 = s2P[i*3+2];
-        for (let j = i+1; j < S2N; j++) {
-          if (used.has(j)) continue;
-          const dx = s2P[j*3]-x1, dy = s2P[j*3+1]-y1, dz = s2P[j*3+2]-z1;
-          const d = Math.sqrt(dx*dx+dy*dy+dz*dz);
-          if (d > 3 && d < 8) {
-            const pts = new Float32Array([x1,y1,z1,s2P[j*3],s2P[j*3+1],s2P[j*3+2]]);
-            const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-            const m = new THREE.LineBasicMaterial({ color: 0x334466, transparent: true, opacity: 0.04, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-            const line = new THREE.Line(g, m); line.renderOrder = -98; scene.add(line);
-            constellations.push({ line, m, phase: Math.random()*Math.PI*2 });
-            used.add(i); used.add(j); break;
-          }
-        }
-      }
-    }
-
-    // Nebulae
+    // Nebula glow — subtle, stationary deep-space color washes
     const nebulae = [];
     const nebCfg = [
-      {x:8,y:5,z:-20,r:12,c:0x0a1533,o:0.03},{x:-10,y:-3,z:-45,r:15,c:0x1a0a33,o:0.025},
-      {x:5,y:7,z:-65,r:10,c:0x0a1a2a,o:0.02},{x:-6,y:4,z:-30,r:14,c:0x1a1033,o:0.022},
-      {x:3,y:-2,z:-80,r:11,c:0x0d1a33,o:0.025},{x:-8,y:6,z:-55,r:13,c:0x111a33,o:0.018},
+      { x: 12, y: 6, z: -30, r: 20, c: 0x060d1a, o: 0.015 },
+      { x: -14, y: -3, z: -55, r: 24, c: 0x0a0618, o: 0.012 },
+      { x: 5, y: 8, z: -80, r: 18, c: 0x06101a, o: 0.01 },
     ];
     for (const n of nebCfg) {
-      const cs = 2 + Math.floor(Math.random()*3);
-      for (let j = 0; j < cs; j++) {
-        const r = n.r*(0.5+Math.random()*0.8);
-        const g = new THREE.SphereGeometry(r, isMob?8:16, isMob?8:16);
-        const m = new THREE.MeshBasicMaterial({ color: n.c, transparent: true, opacity: n.o*(0.6+Math.random()*0.4), blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-        const mesh = new THREE.Mesh(g, m);
-        mesh.position.set(n.x+(Math.random()-0.5)*n.r*0.6, n.y+(Math.random()-0.5)*n.r*0.6, n.z+(Math.random()-0.5)*n.r*0.4);
-        mesh.renderOrder = -95; scene.add(mesh);
-        nebulae.push({ mesh, m, phase: Math.random()*Math.PI*2, speed: 0.02+Math.random()*0.03, baseOp: m.opacity, baseX: mesh.position.x, baseY: mesh.position.y, driftSpeedX: 0.05+Math.random()*0.08, driftSpeedY: 0.04+Math.random()*0.06 });
-      }
-    }
-
-    // Dust lanes
-    const dustLanes = [];
-    for (let i = 0; i < 12; i++) {
-      const w = 30+Math.random()*40, h = 0.3+Math.random()*0.5;
-      const g = new THREE.PlaneGeometry(w, h);
-      const hue = 0.6+Math.random()*0.15;
-      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue,0.2,0.08), transparent: true, opacity: 0.015+Math.random()*0.015, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+      const g = new THREE.SphereGeometry(n.r, 16, 16);
+      const m = new THREE.MeshBasicMaterial({ color: n.c, transparent: true, opacity: n.o, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
       const mesh = new THREE.Mesh(g, m);
-      mesh.position.set((Math.random()-0.5)*20,(Math.random()-0.5)*15,10-Math.random()*130);
-      mesh.rotation.set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.5,(Math.random()-0.5)*1.2);
-      mesh.renderOrder = -88; scene.add(mesh);
-      dustLanes.push({ mesh, m, phase: Math.random()*Math.PI*2, speed: 0.05+Math.random()*0.08, baseOp: m.opacity });
+      mesh.position.set(n.x, n.y, n.z);
+      mesh.renderOrder = -95; scene.add(mesh);
+      nebulae.push({ mesh, m, baseOp: n.o, phase: Math.random() * Math.PI * 2 });
     }
 
     // Shooting stars
@@ -1660,35 +1889,6 @@ function SpaceGallery() {
         pa.array[3]=s.x; pa.array[4]=s.y; pa.array[5]=s.z; pa.needsUpdate=true;
         s.m.opacity=s.br*0.7; s.glow.position.set(s.x,s.y,s.z); s.gm.opacity=s.br*0.9; s.glow.scale.setScalar(0.4+s.br*0.6);
       }
-    }
-
-    // Light shafts
-    const shafts = [];
-    for (let i = 0; i < 8; i++) {
-      const h = 12+Math.random()*12;
-      const g = new THREE.CylinderGeometry(0.015,0.25+Math.random()*0.35,h,6,1,true);
-      const hue = 0.5+Math.random()*0.4;
-      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue,0.3,0.3), transparent: true, opacity: 0.015+Math.random()*0.015, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
-      const mesh = new THREE.Mesh(g, m);
-      mesh.position.set((Math.random()-0.5)*18,h/2+1,5-Math.random()*100);
-      mesh.rotation.z = (Math.random()-0.5)*0.4;
-      mesh.renderOrder = -85; scene.add(mesh);
-      shafts.push({ mesh, m, phase: Math.random()*Math.PI*2, speed: 0.08+Math.random()*0.12, baseOp: m.opacity });
-    }
-
-    // Crystal debris
-    const crystals = [];
-    const crystalN = isMob ? 25 : 50;
-    for (let i = 0; i < crystalN; i++) {
-      const geos = [new THREE.OctahedronGeometry(0.04+Math.random()*0.07,0), new THREE.TetrahedronGeometry(0.04+Math.random()*0.08,0)];
-      const g = geos[Math.floor(Math.random()*2)];
-      const hue = Math.random();
-      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue,0.3,0.45), transparent: true, opacity: 0.12+Math.random()*0.08, blending: THREE.AdditiveBlending, depthWrite: false });
-      const mesh = new THREE.Mesh(g, m);
-      mesh.position.set((Math.random()-0.5)*20,(Math.random()-0.5)*12,15-Math.random()*95);
-      mesh.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);
-      scene.add(mesh);
-      crystals.push({ mesh, rx:(Math.random()-0.5)*0.3, ry:(Math.random()-0.5)*0.4, rz:(Math.random()-0.5)*0.2, bob:Math.random()*Math.PI*2, bobSpd:0.2+Math.random()*0.3 });
     }
 
     // Wake particles
@@ -1745,21 +1945,6 @@ function SpaceGallery() {
       }
     }
 
-    // Lens flare sprites near bright stars
-    const flares = [];
-    if (!isMob) {
-      for (let i = 0; i < Math.min(S2N, 12); i++) {
-        const br = s2Sz[i];
-        if (br < 3.5) continue;
-        const flareMat = new THREE.SpriteMaterial({ color: new THREE.Color(s2Col[i*3], s2Col[i*3+1], s2Col[i*3+2]), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-        const sprite = new THREE.Sprite(flareMat);
-        sprite.position.set(s2P[i*3], s2P[i*3+1], s2P[i*3+2]);
-        sprite.scale.setScalar(0.8);
-        sprite.renderOrder = -97; scene.add(sprite);
-        flares.push({ sprite, mat: flareMat, starIdx: i, baseScale: 0.5 + br * 0.15 });
-      }
-    }
-
     // Lights
     scene.add(new THREE.AmbientLight(0x060612, 0.5));
     const dl = new THREE.DirectionalLight(0x5566aa, 0.35); dl.position.set(3,5,5); scene.add(dl);
@@ -1778,6 +1963,9 @@ function SpaceGallery() {
     let camTP = new THREE.Vector3(0,0.5,12), camTL = new THREE.Vector3(0,0.5,4), camCP = new THREE.Vector3(0,0.5,12);
 
     // Focus/unfocus
+    // Scroll midpoints for each screen's stop zone
+    const stopMids = [0.135, 0.385, 0.635, 0.895];
+
     function doFocus(i) {
       if (_focused) return;
       _focused = true; _fIdx = i; _sStg = 0;
@@ -1785,6 +1973,13 @@ function SpaceGallery() {
       setPanelOpen(true); setCtaVisible(true); setCloseVisible(true); setKbVisible(true);
       setLabelVisible(false);
       setAccentColor(GALLERY_ACCENTS[i]);
+      // Sync scroll position to this screen's stop zone so unfocus returns here
+      scrollT = stopMids[i]; scrollV = stopMids[i];
+      const sectionH = container.offsetHeight - H;
+      if (sectionH > 0) {
+        const sectionTop = container.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: sectionTop + stopMids[i] * sectionH, behavior: 'instant' });
+      }
       const story = GALLERY_STORIES[i][0];
       setStoryContent(story);
       // Particle burst at focused screen
@@ -1821,7 +2016,7 @@ function SpaceGallery() {
       setSStg(n);
       setStoryContent(GALLERY_STORIES[_fIdx][n]);
       sLkRef.current = true; sAcRef.current = 0;
-      setTimeout(() => { sLkRef.current = false; sAcRef.current = 0; }, 800);
+      setTimeout(() => { sLkRef.current = false; sAcRef.current = 0; }, 500);
     }
     advSRef.current = advS;
 
@@ -1903,17 +2098,25 @@ function SpaceGallery() {
       }
     }
 
-    // Block page scroll when focused
+    // Block page scroll when focused — only if gallery is in viewport
     function handleWheelGlobal(e) {
-      if (_focused) e.preventDefault();
+      if (!_focused) return;
+      const rect = container.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight && rect.bottom > 0;
+      if (inView) {
+        e.preventDefault();
+      } else {
+        // Auto-unfocus if user somehow scrolled away
+        doUnfocus();
+      }
     }
 
     // Mouse wheel during focus navigates story stages
     function handleWheel(e) {
       if (!_focused) return;
       e.preventDefault();
-      sAcRef.current += e.deltaY * 0.3;
-      if (Math.abs(sAcRef.current) >= 80) {
+      sAcRef.current += e.deltaY * 0.5;
+      if (Math.abs(sAcRef.current) >= 50) {
         advS(sAcRef.current > 0 ? 1 : -1);
         sAcRef.current = 0;
       }
@@ -1941,7 +2144,10 @@ function SpaceGallery() {
     let sgVisible = true;
     const visObs = new IntersectionObserver(([entry]) => {
       sgVisible = entry.isIntersecting;
-      if (sgVisible && !animId) animate();
+      if (sgVisible && !animId) {
+        lastT = performance.now() / 1000;
+        animId = requestAnimationFrame(animate);
+      }
     }, { rootMargin: '200px' });
     visObs.observe(container);
 
@@ -1975,14 +2181,14 @@ function SpaceGallery() {
         //   type 0 = travel (lerp from A to B), type 1 = stop (hold at A)
         //   index -1 = start position
         const zones = [
-          [0.04, 0, -1, 0],  // travel: start → screen 0  (~76vh)
-          [0.23, 1, 0, 0],   // STOP at screen 0           (~360vh)
-          [0.29, 0, 0, 1],   // travel: screen 0 → 1       (~114vh)
-          [0.48, 1, 1, 1],   // STOP at screen 1           (~360vh)
-          [0.54, 0, 1, 2],   // travel: screen 1 → 2       (~114vh)
-          [0.73, 1, 2, 2],   // STOP at screen 2           (~360vh)
-          [0.79, 0, 2, 3],   // travel: screen 2 → 3       (~114vh)
-          [1.00, 1, 3, 3],   // STOP at screen 3           (~400vh)
+          [0.04, 0, -1, 0],  // travel: start → screen 0
+          [0.23, 1, 0, 0],   // STOP at screen 0
+          [0.29, 0, 0, 1],   // travel: screen 0 → 1
+          [0.48, 1, 1, 1],   // STOP at screen 1
+          [0.54, 0, 1, 2],   // travel: screen 1 → 2
+          [0.73, 1, 2, 2],   // STOP at screen 2
+          [0.79, 0, 2, 3],   // travel: screen 2 → 3
+          [1.00, 1, 3, 3],   // STOP at screen 3
         ];
         let prevEnd = 0;
         for (const z of zones) {
@@ -2151,11 +2357,7 @@ function SpaceGallery() {
 
       // Dim environment during focus
       const envDim = _focused ? 0.25 : 1;
-      constellations.forEach(c => { c.m.opacity = (0.02+Math.sin(t*0.3+c.phase)*0.02)*envDim; });
-      nebulae.forEach(n => { n.mesh.position.x=n.baseX+Math.sin(t*n.driftSpeedX+n.phase)*2; n.mesh.position.y=n.baseY+Math.cos(t*n.driftSpeedY+n.phase*1.3)*1.5; n.m.opacity=n.baseOp*(Math.sin(t*n.speed+n.phase)*0.25+0.75)*envDim; });
-      dustLanes.forEach(d => { d.m.opacity=d.baseOp*(Math.sin(t*d.speed+d.phase)*0.3+0.7)*envDim; });
-      shafts.forEach(s => { s.m.opacity=s.baseOp*(Math.sin(t*s.speed+s.phase)*0.4+0.6)*envDim; });
-      crystals.forEach(c => { c.mesh.rotation.x+=c.rx*dt; c.mesh.rotation.y+=c.ry*dt; c.mesh.rotation.z+=c.rz*dt; c.mesh.position.y+=Math.sin(t*c.bobSpd+c.bob)*0.0003; });
+      nebulae.forEach(n => { n.m.opacity = n.baseOp * (Math.sin(t * 0.015 + n.phase) * 0.15 + 0.85) * envDim; });
       updSh();
 
       // Star cluster twinkling
@@ -2167,16 +2369,6 @@ function SpaceGallery() {
         }
         sa.needsUpdate = true;
         sc.mesh.material.opacity = (0.5 + Math.sin(t * 0.3 + sc.phase) * 0.2) * envDim;
-      });
-
-      // Lens flares — pulse based on star brightness and proximity to camera view
-      flares.forEach(f => {
-        const screenPos = _tmpVec2.copy(f.sprite.position).project(cam);
-        const onScreen = Math.abs(screenPos.x) < 1.2 && Math.abs(screenPos.y) < 1.2 && screenPos.z < 1;
-        const targetOp = onScreen ? 0.06 + Math.sin(t * 2 + f.starIdx) * 0.03 : 0;
-        f.mat.opacity += (targetOp - f.mat.opacity) * Math.min(1, 3 * dt);
-        f.sprite.scale.setScalar(f.baseScale * (1 + Math.sin(t * 1.5 + f.starIdx * 2) * 0.2));
-        if (_focused) f.mat.opacity *= 0.2;
       });
 
       // Dynamic fog — thicker during focus for isolation
@@ -2232,7 +2424,7 @@ function SpaceGallery() {
   })();
 
   return (
-    <section id="work" ref={containerRef} style={{ height: '2000vh', position: 'relative', background: '#010108' }}>
+    <section id="work" ref={containerRef} style={{ height: '1200vh', position: 'relative', background: '#010108' }}>
       {/* Top gradient blend from previous section */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '150px', background: 'linear-gradient(to bottom, #080812, #010108)', zIndex: 1, pointerEvents: 'none' }} />
       {/* Bottom gradient blend into next section */}
@@ -2241,18 +2433,18 @@ function SpaceGallery() {
         .sg-canvas{position:sticky;top:0;width:100%;height:100vh;z-index:0;overflow:hidden}
         .sg-ov{position:absolute;inset:0;pointer-events:none}
         .sg-hud{position:absolute;top:2.2rem;left:2.5rem;display:flex;align-items:baseline;gap:.8rem;pointer-events:none;z-index:4}
-        .sg-hud-n{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:clamp(1.6rem,4vw,2.8rem);color:rgba(237,232,224,.08);transition:color .6s}
-        .sg-hud-l{font-family:'DM Sans',sans-serif;font-weight:300;font-size:12px;letter-spacing:.5em;text-transform:uppercase;color:rgba(237,232,224,.4)}
+        .sg-hud-n{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:clamp(1.6rem,4vw,2.8rem);color:rgba(237,232,224,.5);transition:color .6s}
+        .sg-hud-l{font-family:'DM Sans',sans-serif;font-weight:300;font-size:12px;letter-spacing:.5em;text-transform:uppercase;color:rgba(237,232,224,.7)}
         .sg-plbl{position:absolute;bottom:5.5rem;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:4;transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1)}
         .sg-plbl-n{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:italic;font-size:clamp(1.8rem,3.5vw,2.8rem);letter-spacing:-.02em;text-shadow:0 0 50px rgba(1,1,8,1),0 0 100px rgba(1,1,8,.7);color:rgba(237,232,224,.95)}
-        .sg-plbl-t{font-family:'DM Sans',sans-serif;font-weight:300;font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:rgba(237,232,224,.55);margin-top:.5rem}
-        .sg-plbl-h{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.18);margin-top:.8rem}
+        .sg-plbl-t{font-family:'DM Sans',sans-serif;font-weight:300;font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:rgba(237,232,224,.8);margin-top:.5rem}
+        .sg-plbl-h{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.6);margin-top:.8rem}
         .sg-dbar{position:absolute;right:2rem;top:50%;transform:translateY(-50%);width:1px;height:28vh;background:rgba(255,255,255,.04);z-index:4;transition:opacity .6s}
         .sg-dpip{position:absolute;left:-3px;width:7px;height:7px;border-radius:50%;transition:top .4s cubic-bezier(.22,1,.36,1),border-color .4s,box-shadow .4s,background .4s}
         .sg-dmark:hover div{opacity:1!important}
-        .sg-hint{position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.25);z-index:4;transition:opacity .8s;display:flex;flex-direction:column;align-items:center;gap:10px;animation:sg-hintFloat 3s ease-in-out infinite}
-        .sg-hint-line{width:1px;height:32px;background:linear-gradient(to bottom,transparent,rgba(237,232,224,.12),transparent);position:relative}
-        .sg-hint-dot{width:4px;height:4px;border-radius:50%;background:rgba(237,232,224,.2);animation:sg-dotPulse 2s ease-in-out infinite}
+        .sg-hint{position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(237,232,224,.8);z-index:4;transition:opacity .8s;display:flex;flex-direction:column;align-items:center;gap:10px;animation:sg-hintFloat 3s ease-in-out infinite}
+        .sg-hint-line{width:1px;height:32px;background:linear-gradient(to bottom,transparent,rgba(237,232,224,.5),transparent);position:relative}
+        .sg-hint-dot{width:4px;height:4px;border-radius:50%;background:rgba(237,232,224,.7);animation:sg-dotPulse 2s ease-in-out infinite}
         @keyframes sg-hintFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}
         @keyframes sg-dotPulse{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.5)}}
         .sg-xbtn{position:absolute;top:24px;right:24px;z-index:10;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .5s cubic-bezier(.22,1,.36,1);backdrop-filter:blur(8px)}
@@ -2272,25 +2464,25 @@ function SpaceGallery() {
         @keyframes sg-fadeSlide{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         .sg-sl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:11px;letter-spacing:.6em;text-transform:uppercase;margin-bottom:.8rem;opacity:.9}
         .sg-sh{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:italic;font-size:clamp(1.5rem,2.8vw,2.2rem);line-height:1.15;margin-bottom:.8rem;color:rgba(237,232,224,.95)}
-        .sg-sb{font-family:'DM Sans',sans-serif;font-weight:300;font-size:14px;line-height:1.9;color:rgba(237,232,224,.6);max-width:380px}
+        .sg-sb{font-family:'DM Sans',sans-serif;font-weight:300;font-size:14px;line-height:1.9;color:rgba(237,232,224,.85);max-width:380px}
         .sg-ss{display:flex;gap:2.2rem;margin-top:1.4rem;padding:1rem 0;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
         .sg-ssv{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:1.3rem;letter-spacing:.02em}
-        .sg-ssl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:rgba(237,232,224,.4);margin-top:.2rem}
+        .sg-ssl{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:rgba(237,232,224,.7);margin-top:.2rem}
         .sg-sdots{display:flex;gap:10px;margin-top:1.8rem}
         .sg-sdot{width:24px;height:3px;border-radius:2px;background:rgba(255,255,255,.08);cursor:pointer;transition:all .5s cubic-bezier(.22,1,.36,1);border:none;position:relative}
         .sg-sdot.active{width:40px}
         .sg-sdot.active::after{content:'';position:absolute;inset:-2px;border-radius:3px;box-shadow:0 0 8px var(--sg-ac,#fff);opacity:.4}
         .sg-sdot:hover{background:rgba(255,255,255,.2);transform:scaleY(1.8)}
         .sg-snv{display:flex;justify-content:space-between;align-items:center;margin-top:1.6rem;max-width:380px}
-        .sg-snb{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,232,224,.35);background:none;border:none;cursor:pointer;transition:all .3s;padding:6px 0}
+        .sg-snb{font-family:'JetBrains Mono',monospace;font-weight:300;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,232,224,.7);background:none;border:none;cursor:pointer;transition:all .3s;padding:6px 0}
         .sg-snb:hover{color:var(--sg-ac,#e8622c);transform:translateX(3px)}
-        .sg-spr{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;color:rgba(237,232,224,.2);letter-spacing:.15em}
+        .sg-spr{font-family:'JetBrains Mono',monospace;font-weight:200;font-size:10px;color:rgba(237,232,224,.6);letter-spacing:.15em}
         .sg-vcta{position:absolute;bottom:12%;right:5%;display:inline-flex;align-items:center;gap:10px;padding:14px 30px;border-radius:28px;color:#010108;font-family:'JetBrains Mono',monospace;font-weight:500;font-size:11px;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;cursor:pointer;z-index:7;transition:all .6s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 30px rgba(0,0,0,.2),0 0 40px var(--sg-glow,rgba(255,255,255,.1));animation:sg-ctaPulse 3s ease-in-out infinite}
         @keyframes sg-ctaPulse{0%,100%{box-shadow:0 4px 30px rgba(0,0,0,.2),0 0 40px var(--sg-glow,rgba(255,255,255,.1))}50%{box-shadow:0 4px 30px rgba(0,0,0,.2),0 0 70px var(--sg-glow,rgba(255,255,255,.2))}}
         .sg-vcta:hover{filter:brightness(1.15);transform:translateY(-2px);box-shadow:0 8px 40px rgba(0,0,0,.3),0 0 60px var(--sg-glow,rgba(255,255,255,.15));animation:none}
         .sg-kbh{position:absolute;bottom:2rem;right:2rem;display:flex;flex-direction:column;gap:.4rem;z-index:4;pointer-events:none}
-        .sg-kb{display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-weight:200;font-size:9px;letter-spacing:.15em;color:rgba(237,232,224,.15)}
-        .sg-kbk{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:16px;padding:0 4px;border:1px solid rgba(237,232,224,.1);border-radius:3px;font-size:8px;color:rgba(237,232,224,.25)}
+        .sg-kb{display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-weight:200;font-size:9px;letter-spacing:.15em;color:rgba(237,232,224,.5)}
+        .sg-kbk{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:16px;padding:0 4px;border:1px solid rgba(237,232,224,.3);border-radius:3px;font-size:8px;color:rgba(237,232,224,.6)}
         @media(max-width:768px){
           .sg-spnl{width:100%;padding:6rem 1.5rem 3rem;background:linear-gradient(to top,rgba(1,1,8,.97) 0%,rgba(1,1,8,.92) 60%,rgba(1,1,8,.5) 90%,transparent 100%);justify-content:flex-end;backdrop-filter:blur(8px)}
           .sg-dbar{display:none}
@@ -2322,12 +2514,12 @@ function SpaceGallery() {
         {/* HUD */}
         <div className="sg-hud" style={{ opacity: focused ? 0 : 1, transition: 'opacity 0.6s' }}>
           <span className="sg-hud-n">{hudNum}</span>
-          <span className="sg-hud-l" style={{ opacity: 0.5 }}>{PROJECTS.length} Projects</span>
+          <span className="sg-hud-l">{PROJECTS.length} Projects</span>
         </div>
 
         {/* Project Label */}
         <div className="sg-plbl" style={{ opacity: labelVisible && !focused ? 1 : 0, transform: `translateX(-50%) translateY(${labelVisible && !focused ? 0 : 15}px)` }}>
-          <div style={{ width: '30px', height: '1px', background: 'rgba(237,232,224,0.15)', margin: '0 auto 12px' }} />
+          <div style={{ width: '30px', height: '1px', background: 'rgba(237,232,224,0.5)', margin: '0 auto 12px' }} />
           <div className="sg-plbl-n">{labelName}</div>
           <div className="sg-plbl-t">{labelTags}</div>
           <div className="sg-plbl-h">Click to explore · Drag to rotate</div>
@@ -2370,7 +2562,7 @@ function SpaceGallery() {
         {/* Side Panel */}
         <div className={`sg-spnl sg-ui ${panelOpen ? 'on' : ''}`} style={{ opacity: panelOpen ? 1 : 0, transform: panelOpen ? 'translateX(0)' : 'translateX(-30px)' }}>
           {proj && (
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '.4em', color: 'rgba(237,232,224,0.2)', textTransform: 'uppercase', marginBottom: '1.2rem' }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '.4em', color: 'rgba(237,232,224,0.75)', textTransform: 'uppercase', marginBottom: '1.2rem' }}>
               {String(fIdx + 1).padStart(2,'0')} / {String(PROJECTS.length).padStart(2,'0')} — {proj.title}
             </div>
           )}
@@ -2483,9 +2675,10 @@ function HorizontalPortfolio() {
 
   useEffect(() => {
     if (isMobile) return;
-    let raf;
+    let ticking = false;
     const update = () => {
-      if (!sectionRef.current) { raf = requestAnimationFrame(update); return; }
+      ticking = false;
+      if (!sectionRef.current) return;
       const vw = window.innerWidth;
       const cardW = vw * 0.55;
       const gap = 32;
@@ -2496,10 +2689,11 @@ function HorizontalPortfolio() {
       const p = Math.max(0, Math.min(1, scrolled / maxScroll));
       setHorizontalProgress(p * trackW);
       setCurrentCard(Math.min(totalCards, Math.floor(p * totalCards) + 1));
-      raf = requestAnimationFrame(update);
     };
-    raf = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(raf);
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
   }, [isMobile, totalCards]);
 
   const getSectionHeight = () => {
@@ -3282,110 +3476,527 @@ function FAQItem({ question, answer, num }) {
   );
 }
 function Contact() {
-  const [formData, setFormData] = useState({ name: "", email: "", project: "", budget: "", details: "" });
-  const [submitted, setSubmitted] = useState(false);
-  const [focused, setFocused] = useState(null);
-  const inputStyle = (key) => ({
-    background: "rgba(255,255,255,0.06)", border: focused === key ? "1px solid rgba(232,98,44,0.3)" : "1px solid rgba(255,255,255,0.08)",
-    boxShadow: focused === key ? "0 0 20px rgba(232,98,44,0.05)" : "none",
-    padding: "16px 20px", color: "rgba(255,255,255,0.9)", fontFamily: "'DM Sans', sans-serif", fontSize: "15px", outline: "none",
-    transition: "border-color 0.3s, box-shadow 0.3s", width: "100%", boxSizing: "border-box",
-  });
-  const labelStyle = { fontFamily: "'DM Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", color: "rgba(255,255,255,0.9)", textTransform: "uppercase", display: "block", marginBottom: "8px" };
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [chatStarted, setChatStarted] = useState(false);
+  const [briefGenerated, setBriefGenerated] = useState(false);
+  const [leadSent, setLeadSent] = useState(false);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+  const chatContainerRef = useRef(null);
+
+  const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3001/api/chat' 
+    : '/api/chat';
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => { scrollToBottom(); }, [messages]);
+
+  const startChat = async () => {
+    setChatStarted(true);
+    // Send initial greeting
+    const initialMessages = [{ role: 'user', content: 'Hi, I\'m interested in working with Nocturn Labs.' }];
+    setMessages([{ role: 'user', content: 'Hi, I\'m interested in working with Nocturn Labs.' }]);
+    await streamResponse(initialMessages);
+  };
+
+  const streamResponse = async (allMessages) => {
+    setIsStreaming(true);
+    setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: allMessages }),
+      });
+
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.text) {
+                fullText += parsed.text;
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: 'assistant', content: fullText, streaming: true };
+                  return updated;
+                });
+              }
+              if (parsed.error) {
+                fullText = 'I apologize — there was a connection issue. Please try again or reach out directly at hello@nocturnlabs.com.';
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: 'assistant', content: fullText, streaming: false };
+                  return updated;
+                });
+              }
+            } catch (e) { /* skip */ }
+          }
+        }
+      }
+
+      // Mark streaming complete
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0) updated[updated.length - 1] = { role: 'assistant', content: fullText, streaming: false };
+        return updated;
+      });
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0) {
+          updated[updated.length - 1] = { 
+            role: 'assistant', 
+            content: 'I apologize — there was a connection issue. Please try again or reach out directly at **hello@nocturnlabs.com**.', 
+            streaming: false 
+          };
+        }
+        return updated;
+      });
+    }
+
+    setIsStreaming(false);
+
+    // Auto-detect if brief was generated (check latest assistant message)
+    if (fullText && (
+      fullText.toLowerCase().includes('project brief') ||
+      fullText.toLowerCase().includes('summary') ||
+      fullText.toLowerCase().includes('here\'s what i\'ve gathered') ||
+      fullText.toLowerCase().includes('scope') ||
+      fullText.toLowerCase().includes('next steps')
+    )) {
+      setBriefGenerated(true);
+    }
+  };
+
+  // Extract contact info from conversation
+  const extractContactInfo = () => {
+    const allText = messages.map(m => m.content).join(' ');
+    const emailMatch = allText.match(/[\w.-]+@[\w.-]+\.\w+/);
+    const namePatterns = [/my name is (\w+ \w+)/i, /i'm (\w+ \w+)/i, /this is (\w+)/i];
+    let name = '';
+    for (const p of namePatterns) {
+      const m = allText.match(p);
+      if (m) { name = m[1]; break; }
+    }
+    return {
+      name: name || 'Not provided',
+      email: emailMatch ? emailMatch[0] : 'Not provided',
+      projectType: 'See transcript',
+      budget: 'See transcript',
+    };
+  };
+
+  // Send lead to backend (Supabase + Email + Discord)
+  const submitLead = async () => {
+    if (leadSent) return;
+    setLeadSent(true);
+    
+    const contactInfo = extractContactInfo();
+    const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+    const brief = lastAssistantMsg?.content || '';
+
+    try {
+      const LEAD_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001/api/lead' 
+        : '/api/lead';
+      
+      await fetch(LEAD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
+          brief,
+          contactInfo,
+        }),
+      });
+    } catch (e) {
+      console.error('Lead submission error:', e);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || isStreaming) return;
+    const userMsg = input.trim();
+    setInput('');
+
+    const newMessages = [...messages, { role: 'user', content: userMsg }];
+    setMessages(newMessages);
+
+    // Filter to only role/content for API
+    const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
+    await streamResponse(apiMessages);
+
+    // Auto-submit lead after 6+ messages (conversation is substantive)
+    if (newMessages.length >= 6 && !leadSent) {
+      submitLead();
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Simple markdown-like rendering
+  const renderContent = (text) => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br/>');
+  };
+
+  const suggestedStarters = [
+    "I need a new website for my business",
+    "I'm looking at a redesign of my current site",
+    "I want an e-commerce store built from scratch",
+    "I have a startup and need a landing page",
+  ];
 
   return (
     <section id="contact" style={{ padding: "160px 40px", position: "relative" }}>
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(180deg, transparent 0%, rgba(232,98,44,0.04) 100%)" }} />
       <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
-        {submitted ? (
-          <div style={{ textAlign: "center", padding: "80px 0", animation: "fadeIn 0.5s ease" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", border: "2px solid #e8622c", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", animation: "scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" }}>
-              <span style={{ color: "#e8622c", fontSize: "28px" }}>✓</span>
-            </div>
-            <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "36px", color: "rgba(255,255,255,0.9)", fontWeight: 400, margin: "0 0 12px" }}>We'll be in touch</h3>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", color: "rgba(255,255,255,0.9)" }}>Expect a response within 24 hours.</p>
-          </div>
-        ) : (
-          <div className="contact-layout" style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "80px", alignItems: "start" }}>
-            {/* Left — Info */}
-            <AnimatedText>
-              <div>
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", letterSpacing: "4px", color: "#e8622c", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
-                  <span style={{ width: "40px", height: "1px", background: "#e8622c", display: "inline-block" }} /> START YOUR PROJECT
-                </span>
-                <h2 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(36px, 4vw, 60px)", color: "rgba(255,255,255,0.9)", margin: "0 0 24px", fontWeight: 400, letterSpacing: "-2px", lineHeight: 1.1 }}>
-                  Let's build something<br /><span style={{ fontStyle: "italic", color: "rgba(255,255,255,0.9)" }}>extraordinary</span>
-                </h2>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px", color: "rgba(255,255,255,0.9)", lineHeight: 1.7, margin: "0 0 48px", maxWidth: "400px" }}>Tell us about your vision. We'll handle the strategy, design, and engineering.</p>
+        <div className="contact-layout" style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "80px", alignItems: "start" }}>
+          {/* Left — Info */}
+          <AnimatedText>
+            <div>
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", letterSpacing: "4px", color: "#e8622c", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
+                <span style={{ width: "40px", height: "1px", background: "#e8622c", display: "inline-block" }} /> AI PROJECT CONSULTANT
+              </span>
+              <h2 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "clamp(36px, 4vw, 60px)", color: "rgba(255,255,255,0.9)", margin: "0 0 24px", fontWeight: 400, letterSpacing: "-2px", lineHeight: 1.1 }}>
+                Tell us your<br /><span style={{ fontStyle: "italic", color: "rgba(255,255,255,0.9)" }}>vision</span>
+              </h2>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px", color: "rgba(255,255,255,0.7)", lineHeight: 1.7, margin: "0 0 48px", maxWidth: "400px" }}>
+                Our AI consultant will understand your project, ask the right questions, and generate a detailed brief — so we can hit the ground running.
+              </p>
 
-                {/* Contact details */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  {[
-                    { label: "EMAIL", value: "hello@nocturnlabs.com", href: "mailto:hello@nocturnlabs.com" },
-                    { label: "RESPONSE TIME", value: "< 24 hours" },
-                    { label: "LOCATION", value: "Remote-First / Worldwide" },
-                  ].map(item => (
-                    <div key={item.label}>
-                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", letterSpacing: "3px", color: "rgba(255,255,255,0.9)", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>{item.label}</span>
-                      {item.href ? (
-                        <a href={item.href} data-hover style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", color: "#e8622c", textDecoration: "none", borderBottom: "1px solid rgba(232,98,44,0.2)", paddingBottom: "2px" }}>{item.value}</a>
-                      ) : (
-                        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", color: "rgba(255,255,255,0.9)" }}>{item.value}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Consultation CTA */}
-                <div style={{ marginTop: "48px", padding: "28px", background: "rgba(232,98,44,0.03)", border: "1px solid rgba(232,98,44,0.25)" }}>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.9)", margin: "0 0 16px", lineHeight: 1.6 }}>Rather hop on a quick call?</p>
-                  <MagneticButton data-hover-cta onClick={() => {}} style={{ padding: "12px 24px", background: "transparent", border: "1px solid rgba(232,98,44,0.3)", color: "#e8622c", fontFamily: "'DM Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", transition: "all 0.3s" }}>
-                    Book a Free 15-Min Call →
-                  </MagneticButton>
-                </div>
+              {/* Contact details */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                {[
+                  { label: "EMAIL", value: "hello@nocturnlabs.com", href: "mailto:hello@nocturnlabs.com" },
+                  { label: "RESPONSE TIME", value: "< 24 hours" },
+                  { label: "POWERED BY", value: "Claude AI" },
+                ].map(item => (
+                  <div key={item.label}>
+                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", letterSpacing: "3px", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>{item.label}</span>
+                    {item.href ? (
+                      <a href={item.href} data-hover style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", color: "#e8622c", textDecoration: "none", borderBottom: "1px solid rgba(232,98,44,0.2)", paddingBottom: "2px" }}>{item.value}</a>
+                    ) : (
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "15px", color: "rgba(255,255,255,0.8)" }}>{item.value}</span>
+                    )}
+                  </div>
+                ))}
               </div>
-            </AnimatedText>
 
-            {/* Right — Form */}
-            <AnimatedText delay={0.2}>
-              <div style={{ background: "rgba(0,0,0,0.015)", border: "1px solid rgba(255,255,255,0.06)", padding: "48px" }}>
-                <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                  {[
-                    { key: "name", label: "YOUR NAME", placeholder: "John Smith" },
-                    { key: "email", label: "EMAIL", placeholder: "john@company.com" },
-                    { key: "project", label: "PROJECT TYPE", placeholder: "Website Redesign..." },
-                    { key: "budget", label: "BUDGET RANGE", placeholder: "$3,500 — $20,000+" },
-                  ].map(field => (
-                    <div key={field.key}>
-                      <label style={labelStyle}>{field.label}</label>
-                      <input data-hover value={formData[field.key]} onChange={e => setFormData(p => ({ ...p, [field.key]: e.target.value }))} placeholder={field.placeholder}
-                        style={inputStyle(field.key)} onFocus={() => setFocused(field.key)} onBlur={() => setFocused(null)} />
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: "24px" }}>
-                  <label style={labelStyle}>PROJECT DETAILS</label>
-                  <textarea data-hover rows={4} placeholder="Tell us about your project, goals, and timeline..." value={formData.details}
-                    onChange={e => setFormData(p => ({ ...p, details: e.target.value }))}
-                    style={{ ...inputStyle("details"), resize: "vertical" }} onFocus={() => setFocused("details")} onBlur={() => setFocused(null)} />
-                </div>
-                <MagneticButton data-hover-cta onClick={() => setSubmitted(true)}
-                  style={{ marginTop: "32px", width: "100%", padding: "20px", background: "#e8622c", color: "#ffffff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: "13px", letterSpacing: "3px", textTransform: "uppercase", fontWeight: 700, cursor: "pointer", transition: "all 0.3s" }}>
-                  SUBMIT INQUIRY →
+              {/* Call CTA */}
+              <div style={{ marginTop: "48px", padding: "28px", background: "rgba(232,98,44,0.03)", border: "1px solid rgba(232,98,44,0.25)" }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.7)", margin: "0 0 16px", lineHeight: 1.6 }}>Rather talk to a human?</p>
+                <MagneticButton data-hover-cta onClick={() => {}} style={{ padding: "12px 24px", background: "transparent", border: "1px solid rgba(232,98,44,0.3)", color: "#e8622c", fontFamily: "'DM Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", transition: "all 0.3s" }}>
+                  Book a Free 15-Min Call →
                 </MagneticButton>
+              </div>
+            </div>
+          </AnimatedText>
 
-                {/* Trust indicators */}
-                <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "24px", flexWrap: "wrap" }}>
-                  {["No spam", "Free consultation", "NDA on request"].map(item => (
-                    <span key={item} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "11px", color: "rgba(255,255,255,0.9)", letterSpacing: "1px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#e8622c", opacity: 0.5 }} />{item}
+          {/* Right — AI Chat */}
+          <AnimatedText delay={0.2}>
+            <div data-no-fluid 
+              onClick={e => e.stopPropagation()} 
+              onWheel={e => e.stopPropagation()} 
+              onTouchMove={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+              style={{ 
+              background: "rgba(6,6,18,0.85)", 
+              border: "1px solid rgba(255,255,255,0.06)", 
+              borderRadius: "6px",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              height: "680px",
+              backdropFilter: "blur(40px)",
+              WebkitBackdropFilter: "blur(40px)",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.6), 0 0 1px rgba(255,255,255,0.1) inset, 0 1px 0 rgba(255,255,255,0.04) inset",
+              position: "relative",
+            }}>
+              {/* Subtle top accent line */}
+              <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "1px", background: "linear-gradient(90deg, transparent, rgba(232,98,44,0.3), transparent)" }} />
+              
+              {/* Chat header */}
+              <div style={{ 
+                padding: "18px 28px", 
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                background: "rgba(0,0,0,0.25)",
+              }}>
+                <img src="/nocturn-logo.webp" alt="" style={{ width: "28px", height: "28px", objectFit: "contain", filter: "drop-shadow(0 0 6px rgba(240,148,58,0.4))" }} />
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>Nocturn AI</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ 
+                      width: "7px", height: "7px", borderRadius: "50%", 
+                      background: isStreaming ? "#f5a623" : "#28ca41",
+                      boxShadow: isStreaming ? "0 0 8px rgba(245,166,35,0.5)" : "0 0 6px rgba(40,202,65,0.4)",
+                      animation: isStreaming ? "pulse 1.5s infinite" : "none",
+                    }} />
+                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "11px", letterSpacing: "1px", color: "rgba(255,255,255,0.35)", textTransform: "uppercase" }}>
+                      {isStreaming ? "Typing..." : "Online"}
                     </span>
-                  ))}
+                  </div>
                 </div>
               </div>
-            </AnimatedText>
-          </div>
-        )}
+
+              {/* Messages area */}
+              <div ref={chatContainerRef} style={{ 
+                flex: 1, 
+                overflowY: "auto", 
+                padding: "28px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px",
+                scrollBehavior: "smooth",
+              }}>
+                {!chatStarted ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "32px", textAlign: "center" }}>
+                    <div>
+                      <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(232,98,44,0.15), rgba(240,148,58,0.08))", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", boxShadow: "0 12px 40px rgba(232,98,44,0.2), 0 0 0 1px rgba(232,98,44,0.15)", border: "1px solid rgba(232,98,44,0.15)" }}>
+                        <img src="/nocturn-logo.webp" alt="Nocturn Labs" style={{ width: "36px", height: "36px", objectFit: "contain", filter: "drop-shadow(0 0 8px rgba(240,148,58,0.5))" }} />
+                      </div>
+                      <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "28px", color: "rgba(255,255,255,0.9)", fontWeight: 400, margin: "0 0 12px" }}>Start a conversation</h3>
+                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.4)", maxWidth: "340px", lineHeight: 1.7 }}>
+                        Our AI consultant understands your vision, asks the right questions, and generates a project brief — ready for our team.
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%", maxWidth: "380px" }}>
+                      {suggestedStarters.map((starter, i) => (
+                        <button key={i} data-hover onClick={() => {
+                          setChatStarted(true);
+                          const msg = [{ role: 'user', content: starter }];
+                          setMessages([{ role: 'user', content: starter }]);
+                          streamResponse(msg);
+                        }} style={{
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          padding: "14px 20px",
+                          color: "rgba(255,255,255,0.7)",
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          transition: "all 0.3s",
+                          borderRadius: "2px",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(232,98,44,0.3)'; e.currentTarget.style.color = 'rgba(255,255,255,0.9)'; e.currentTarget.style.background = 'rgba(232,98,44,0.05)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                        >
+                          {starter}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((msg, i) => (
+                    <div key={i} style={{
+                      display: "flex",
+                      justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      gap: "12px",
+                      alignItems: "flex-start",
+                      animation: "fadeIn 0.3s ease",
+                    }}>
+                      {msg.role === 'assistant' && (
+                        <div style={{ 
+                          width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                          background: "rgba(232,98,44,0.1)", 
+                          border: "1px solid rgba(232,98,44,0.15)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          marginTop: "4px",
+                        }}>
+                          <img src="/nocturn-logo.webp" alt="" style={{ width: "20px", height: "20px", objectFit: "contain", filter: "drop-shadow(0 0 4px rgba(240,148,58,0.4))" }} />
+                        </div>
+                      )}
+                      <div style={{
+                        maxWidth: "75%",
+                        padding: "16px 20px",
+                        background: msg.role === 'user' 
+                          ? "rgba(232,98,44,0.12)" 
+                          : "rgba(255,255,255,0.04)",
+                        border: msg.role === 'user'
+                          ? "1px solid rgba(232,98,44,0.2)"
+                          : "1px solid rgba(255,255,255,0.06)",
+                        borderRadius: msg.role === 'user' ? "4px 4px 0 4px" : "4px 4px 4px 0",
+                      }}>
+                        <div 
+                          style={{ 
+                            fontFamily: "'DM Sans', sans-serif", 
+                            fontSize: "14px", 
+                            color: "rgba(255,255,255,0.85)", 
+                            lineHeight: 1.7,
+                          }}
+                          dangerouslySetInnerHTML={{ __html: renderContent(msg.content || '') }}
+                        />
+                        {msg.streaming && (
+                          <span style={{ 
+                            display: "inline-block", width: "6px", height: "16px", 
+                            background: "#e8622c", marginLeft: "2px",
+                            animation: "pulse 0.8s infinite",
+                            verticalAlign: "text-bottom",
+                          }} />
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Brief generated — Send to team button */}
+              {briefGenerated && chatStarted && (
+                <div style={{ 
+                  padding: "14px 20px", 
+                  borderTop: "1px solid rgba(232,98,44,0.15)",
+                  background: "rgba(232,98,44,0.04)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                }}>
+                  {leadSent ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
+                      <span style={{ color: "#28ca41", fontSize: "16px" }}>✓</span>
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                        Brief sent to our team — we'll be in touch within 24 hours.
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.5)", flex: 1 }}>
+                        Ready to send this to our team?
+                      </span>
+                      <button 
+                        onClick={submitLead} 
+                        data-hover
+                        style={{
+                          padding: "10px 20px",
+                          background: "#e8622c",
+                          border: "none",
+                          color: "#fff",
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontSize: "11px",
+                          letterSpacing: "2px",
+                          textTransform: "uppercase",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          borderRadius: "2px",
+                          transition: "all 0.3s",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Send Brief to Team →
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Input area */}
+              {chatStarted && (
+                <div style={{ 
+                  padding: "16px 20px", 
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "center",
+                  background: "rgba(0,0,0,0.2)",
+                }}>
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={isStreaming ? "Waiting for response..." : "Describe your project..."}
+                    disabled={isStreaming}
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      padding: "14px 18px",
+                      color: "rgba(255,255,255,0.9)",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: "14px",
+                      outline: "none",
+                      borderRadius: "2px",
+                      transition: "border-color 0.3s",
+                    }}
+                    onFocus={e => e.target.style.borderColor = 'rgba(232,98,44,0.3)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={isStreaming || !input.trim()}
+                    data-hover
+                    style={{
+                      width: "48px", height: "48px",
+                      background: input.trim() && !isStreaming ? "#e8622c" : "rgba(255,255,255,0.04)",
+                      border: "none",
+                      color: input.trim() && !isStreaming ? "#fff" : "rgba(255,255,255,0.3)",
+                      fontSize: "18px",
+                      cursor: input.trim() && !isStreaming ? "pointer" : "default",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      borderRadius: "2px",
+                      transition: "all 0.3s",
+                      flexShrink: 0,
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+
+              {/* Trust bar */}
+              <div style={{ 
+                padding: "10px 20px", 
+                borderTop: "1px solid rgba(255,255,255,0.04)",
+                display: "flex", justifyContent: "center", gap: "24px",
+                background: "rgba(0,0,0,0.15)",
+              }}>
+                {["End-to-end encrypted", "No data stored", "Powered by Claude"].map(item => (
+                  <span key={item} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", color: "rgba(255,255,255,0.3)", letterSpacing: "1px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ width: "3px", height: "3px", borderRadius: "50%", background: "#e8622c", opacity: 0.4 }} />{item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </AnimatedText>
+        </div>
       </div>
     </section>
   );
@@ -3489,7 +4100,11 @@ export default function AgencySite() {
   const { isTouch } = useDeviceDetect();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 80);
+    let lastScrolled = false;
+    const handleScroll = () => {
+      const s = window.scrollY > 80;
+      if (s !== lastScrolled) { lastScrolled = s; setScrolled(s); }
+    };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -3515,6 +4130,8 @@ export default function AgencySite() {
     <>
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        section { contain: layout style; }
+        nav { will-change: backdrop-filter; }
         html { scroll-behavior: smooth; }
         body { background: #080812; color: #e8e4df; overflow-x: hidden; max-width: 100vw; }
         ::selection { background: #e8622c; color: #fff; }
@@ -3526,6 +4143,7 @@ export default function AgencySite() {
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes loadingBar { 0% { width: 0%; } 100% { width: 100%; } }
+        @keyframes loaderSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes pulseRing { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
         @keyframes marqueeLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
         @keyframes marqueeRight { 0% { transform: translateX(-33.333%); } 100% { transform: translateX(0); } }
