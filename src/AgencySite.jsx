@@ -3681,6 +3681,14 @@ function Contact() {
     }
   };
 
+  // Auto-submit lead when message count reaches threshold
+  useEffect(() => {
+    if (messagesRef.current.length >= 6 && !leadSentRef.current && chatStarted) {
+      console.log('[Nocturn] Message threshold reached:', messagesRef.current.length, 'messages');
+      submitLead();
+    }
+  }, [messages, chatStarted]);
+
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
     const userMsg = input.trim();
@@ -3692,11 +3700,6 @@ function Contact() {
     // Filter to only role/content for API
     const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
     await streamResponse(apiMessages);
-
-    // Auto-submit lead after 6+ messages (conversation is substantive)
-    if (newMessages.length >= 6 && !leadSentRef.current) {
-      setTimeout(() => submitLead(), 1000);
-    }
   };
 
   const handleKeyDown = (e) => {
