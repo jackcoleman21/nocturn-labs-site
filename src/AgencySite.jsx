@@ -3602,10 +3602,6 @@ function Contact() {
       fullText.toLowerCase().includes('next steps')
     )) {
       setBriefGenerated(true);
-      // Auto-submit lead when brief is generated
-      if (!leadSentRef.current) {
-        setTimeout(() => submitLead(), 500);
-      }
     }
   };
 
@@ -3707,24 +3703,41 @@ function Contact() {
     }
   };
 
-  // Auto-submit lead when contact info is detected or conversation is very long
+  // Auto-submit lead: wait for BOTH email + brief, or very long conversation
   useEffect(() => {
     // Only evaluate when NOT actively streaming (wait for complete messages)
     if (!chatStarted || isStreaming || messagesRef.current.length < 4) return;
+    if (leadSentRef.current) return;
     
     const allText = messagesRef.current.map(m => m.content).join(' ');
     const hasEmail = /[\w.-]+@[\w.-]+\.\w{2,}/.test(allText);
     
-    if (hasEmail && !leadSentRef.current) {
-      // Set flag SYNCHRONOUSLY to prevent duplicate calls
+    // Check if AI has generated a brief in any message
+    const aiBriefGenerated = messagesRef.current.some(m => 
+      m.role === 'assistant' && (
+        m.content.toLowerCase().includes('project brief') ||
+        m.content.toLowerCase().includes('here\'s what i\'ve gathered') ||
+        (m.content.toLowerCase().includes('scope') && m.content.toLowerCase().includes('timeline'))
+      )
+    );
+    
+    if (hasEmail && aiBriefGenerated) {
+      // Best case: have contact info AND a full brief
       leadSentRef.current = true;
       setLeadSent(true);
-      console.log('[Nocturn] Contact info detected, submitting lead...');
+      console.log('[Nocturn] Email + brief detected, submitting complete lead...');
       submitLead();
-    } else if (messagesRef.current.length >= 12 && !leadSentRef.current) {
+    } else if (hasEmail && messagesRef.current.length >= 10) {
+      // Have email but no brief detected after many messages — submit anyway
       leadSentRef.current = true;
       setLeadSent(true);
-      console.log('[Nocturn] Long conversation, submitting lead...');
+      console.log('[Nocturn] Email + long conversation, submitting lead...');
+      submitLead();
+    } else if (messagesRef.current.length >= 14 && !hasEmail) {
+      // Very long conversation without email — capture transcript anyway
+      leadSentRef.current = true;
+      setLeadSent(true);
+      console.log('[Nocturn] Very long conversation, submitting lead...');
       submitLead();
     }
   }, [messages, chatStarted, isStreaming]);
