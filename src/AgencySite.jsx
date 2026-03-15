@@ -3618,12 +3618,15 @@ function Contact() {
   };
 
   // Send lead to backend (Supabase + Email + Discord)
-  const submitLead = async () => {
+  const submitLead = async (currentMessages) => {
     if (leadSent) return;
+    const msgsToSend = currentMessages || messages;
+    if (!msgsToSend || msgsToSend.length < 2) return;
+    
     setLeadSent(true);
     
     const contactInfo = extractContactInfo();
-    const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+    const lastAssistantMsg = [...msgsToSend].reverse().find(m => m.role === 'assistant');
     const brief = lastAssistantMsg?.content || '';
 
     try {
@@ -3631,17 +3634,23 @@ function Contact() {
         ? 'http://localhost:3001/api/lead' 
         : '/api/lead';
       
-      await fetch(LEAD_URL, {
+      console.log('[Nocturn] Submitting lead...', { messageCount: msgsToSend.length, url: LEAD_URL });
+      
+      const res = await fetch(LEAD_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: messages.map(m => ({ role: m.role, content: m.content })),
+          messages: msgsToSend.map(m => ({ role: m.role, content: m.content })),
           brief,
           contactInfo,
         }),
       });
+      
+      const result = await res.json();
+      console.log('[Nocturn] Lead submitted:', result);
     } catch (e) {
-      console.error('Lead submission error:', e);
+      console.error('[Nocturn] Lead submission error:', e);
+      setLeadSent(false); // Allow retry on error
     }
   };
 
@@ -3658,8 +3667,12 @@ function Contact() {
     await streamResponse(apiMessages);
 
     // Auto-submit lead after 6+ messages (conversation is substantive)
+    // Use a timeout to ensure state has settled after streaming
     if (newMessages.length >= 6 && !leadSent) {
-      submitLead();
+      setTimeout(() => {
+        // Read the latest messages from the DOM after streaming is done
+        submitLead();
+      }, 2000);
     }
   };
 
