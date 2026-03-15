@@ -3629,38 +3629,64 @@ function Contact() {
 
   // Send lead to backend (Supabase + Email + Discord)
   const submitLead = async () => {
-    if (leadSentRef.current) return;
     const msgsToSend = messagesRef.current;
     if (!msgsToSend || msgsToSend.length < 2) return;
     
-    leadSentRef.current = true;
-    setLeadSent(true);
-    
-    // Extract contact info from latest messages
+    // Extract contact info from USER messages only (not AI responses)
+    const userText = msgsToSend.filter(m => m.role === 'user').map(m => m.content).join(' ');
     const allText = msgsToSend.map(m => m.content).join(' ');
-    const emailMatch = allText.match(/[\w.-]+@[\w.-]+\.\w+/);
-    const namePatterns = [/my name is (\w+ ?\w*)/i, /i'm (\w+ ?\w*)/i, /this is (\w+)/i, /name.{0,5}(\w+ \w+)/i];
+    
+    // Email
+    const emailMatch = userText.match(/[\w.-]+@[\w.-]+\.\w{2,}/);
+    
+    // Name - check user messages for name patterns
+    const namePatterns = [
+      /my name is ([\w]+ ?[\w]*)/i,
+      /i'm ([\w]+ ?[\w]*)/i,
+      /called? ([\w]+ ?[\w]*)/i,
+      /this is ([\w]+)/i,
+    ];
     let name = '';
     for (const p of namePatterns) {
-      const m = allText.match(p);
-      if (m) { name = m[1]; break; }
+      const m = userText.match(p);
+      if (m && m[1] && !['a', 'the', 'an', 'interested', 'looking', 'need', 'want'].includes(m[1].toLowerCase())) { 
+        name = m[1].trim(); 
+        break; 
+      }
     }
+    
+    // Business name - look for brand/company mentions in user messages
+    const bizPatterns = [
+      /(?:brand|company|business|shop|store|agency|studio|brand)\s+(?:is\s+|called\s+|named\s+)["']?([\w\s]+?)["']?(?:\.|,|\s+and\s|\s+with\s|$)/i,
+      /called\s+["']?([\w\s]+?)["']?\s+(?:with|and|,|\.)/i,
+      /["']([\w\s]{2,30})["']/,
+    ];
+    let business = '';
+    for (const p of bizPatterns) {
+      const m = userText.match(p);
+      if (m && m[1]) { business = m[1].trim(); break; }
+    }
+    
+    // Budget
+    const budgetMatch = userText.match(/\$[\d,]+(?:\s*[-–—]\s*\$?[\d,]+)?/);
+    
+    // Project type from AI brief
+    const lastAssistantMsg = [...msgsToSend].reverse().find(m => m.role === 'assistant');
+    const brief = lastAssistantMsg?.content || '';
+    
     const contactInfo = {
       name: name || 'Not provided',
       email: emailMatch ? emailMatch[0] : 'Not provided',
-      projectType: 'See transcript',
-      budget: 'See transcript',
+      projectType: business ? `${business}` : 'See transcript',
+      budget: budgetMatch ? budgetMatch[0] : 'See transcript',
     };
-    
-    const lastAssistantMsg = [...msgsToSend].reverse().find(m => m.role === 'assistant');
-    const brief = lastAssistantMsg?.content || '';
 
     try {
       const LEAD_URL = window.location.hostname === 'localhost' 
         ? 'http://localhost:3001/api/lead' 
         : '/api/lead';
       
-      console.log('[Nocturn] Submitting lead...', { messageCount: msgsToSend.length, url: LEAD_URL });
+      console.log('[Nocturn] Submitting lead...', contactInfo);
       
       const res = await fetch(LEAD_URL, {
         method: 'POST',
@@ -3683,33 +3709,25 @@ function Contact() {
 
   // Auto-submit lead when contact info is detected or conversation is very long
   useEffect(() => {
-    if (!chatStarted || messagesRef.current.length < 4) return;
+    // Only evaluate when NOT actively streaming (wait for complete messages)
+    if (!chatStarted || isStreaming || messagesRef.current.length < 4) return;
     
     const allText = messagesRef.current.map(m => m.content).join(' ');
     const hasEmail = /[\w.-]+@[\w.-]+\.\w{2,}/.test(allText);
-    const hasName = /my name is |i'm |this is |name.{0,5}\w+ \w+/i.test(allText);
-    const hasContactInfo = hasEmail; // Email is the key qualifier
     
-    if (hasContactInfo && !leadSentRef.current) {
-      // Contact info detected — submit immediately
+    if (hasEmail && !leadSentRef.current) {
+      // Set flag SYNCHRONOUSLY to prevent duplicate calls
+      leadSentRef.current = true;
+      setLeadSent(true);
       console.log('[Nocturn] Contact info detected, submitting lead...');
       submitLead();
     } else if (messagesRef.current.length >= 12 && !leadSentRef.current) {
-      // Long conversation without contact info — capture anyway
-      console.log('[Nocturn] Long conversation, submitting lead without contact info...');
+      leadSentRef.current = true;
+      setLeadSent(true);
+      console.log('[Nocturn] Long conversation, submitting lead...');
       submitLead();
-    } else if (leadSentRef.current && hasContactInfo) {
-      // Already submitted but new contact info appeared — re-submit with updated info
-      const prevText = (messagesRef.current.slice(0, -2) || []).map(m => m.content).join(' ');
-      const prevHadEmail = /[\w.-]+@[\w.-]+\.\w{2,}/.test(prevText);
-      if (!prevHadEmail && hasEmail) {
-        console.log('[Nocturn] New contact info detected, re-submitting lead...');
-        leadSentRef.current = false;
-        setLeadSent(false);
-        submitLead();
-      }
     }
-  }, [messages, chatStarted]);
+  }, [messages, chatStarted, isStreaming]);
 
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
