@@ -3681,11 +3681,33 @@ function Contact() {
     }
   };
 
-  // Auto-submit lead when message count reaches threshold
+  // Auto-submit lead when contact info is detected or conversation is very long
   useEffect(() => {
-    if (messagesRef.current.length >= 6 && !leadSentRef.current && chatStarted) {
-      console.log('[Nocturn] Message threshold reached:', messagesRef.current.length, 'messages');
+    if (!chatStarted || messagesRef.current.length < 4) return;
+    
+    const allText = messagesRef.current.map(m => m.content).join(' ');
+    const hasEmail = /[\w.-]+@[\w.-]+\.\w{2,}/.test(allText);
+    const hasName = /my name is |i'm |this is |name.{0,5}\w+ \w+/i.test(allText);
+    const hasContactInfo = hasEmail; // Email is the key qualifier
+    
+    if (hasContactInfo && !leadSentRef.current) {
+      // Contact info detected — submit immediately
+      console.log('[Nocturn] Contact info detected, submitting lead...');
       submitLead();
+    } else if (messagesRef.current.length >= 12 && !leadSentRef.current) {
+      // Long conversation without contact info — capture anyway
+      console.log('[Nocturn] Long conversation, submitting lead without contact info...');
+      submitLead();
+    } else if (leadSentRef.current && hasContactInfo) {
+      // Already submitted but new contact info appeared — re-submit with updated info
+      const prevText = (messagesRef.current.slice(0, -2) || []).map(m => m.content).join(' ');
+      const prevHadEmail = /[\w.-]+@[\w.-]+\.\w{2,}/.test(prevText);
+      if (!prevHadEmail && hasEmail) {
+        console.log('[Nocturn] New contact info detected, re-submitting lead...');
+        leadSentRef.current = false;
+        setLeadSent(false);
+        submitLead();
+      }
     }
   }, [messages, chatStarted]);
 
