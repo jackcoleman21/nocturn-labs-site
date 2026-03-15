@@ -3486,9 +3486,15 @@ function Contact() {
   const [chatStarted, setChatStarted] = useState(false);
   const [briefGenerated, setBriefGenerated] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
+  const messagesRef = useRef([]);
+  const leadSentRef = useRef(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
+
+  // Keep refs in sync with state
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { leadSentRef.current = leadSent; }, [leadSent]);
 
   const API_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:3001/api/chat' 
@@ -3596,6 +3602,10 @@ function Contact() {
       fullText.toLowerCase().includes('next steps')
     )) {
       setBriefGenerated(true);
+      // Auto-submit lead when brief is generated
+      if (!leadSentRef.current) {
+        setTimeout(() => submitLead(), 500);
+      }
     }
   };
 
@@ -3618,14 +3628,30 @@ function Contact() {
   };
 
   // Send lead to backend (Supabase + Email + Discord)
-  const submitLead = async (currentMessages) => {
-    if (leadSent) return;
-    const msgsToSend = currentMessages || messages;
+  const submitLead = async () => {
+    if (leadSentRef.current) return;
+    const msgsToSend = messagesRef.current;
     if (!msgsToSend || msgsToSend.length < 2) return;
     
+    leadSentRef.current = true;
     setLeadSent(true);
     
-    const contactInfo = extractContactInfo();
+    // Extract contact info from latest messages
+    const allText = msgsToSend.map(m => m.content).join(' ');
+    const emailMatch = allText.match(/[\w.-]+@[\w.-]+\.\w+/);
+    const namePatterns = [/my name is (\w+ ?\w*)/i, /i'm (\w+ ?\w*)/i, /this is (\w+)/i, /name.{0,5}(\w+ \w+)/i];
+    let name = '';
+    for (const p of namePatterns) {
+      const m = allText.match(p);
+      if (m) { name = m[1]; break; }
+    }
+    const contactInfo = {
+      name: name || 'Not provided',
+      email: emailMatch ? emailMatch[0] : 'Not provided',
+      projectType: 'See transcript',
+      budget: 'See transcript',
+    };
+    
     const lastAssistantMsg = [...msgsToSend].reverse().find(m => m.role === 'assistant');
     const brief = lastAssistantMsg?.content || '';
 
@@ -3650,7 +3676,8 @@ function Contact() {
       console.log('[Nocturn] Lead submitted:', result);
     } catch (e) {
       console.error('[Nocturn] Lead submission error:', e);
-      setLeadSent(false); // Allow retry on error
+      leadSentRef.current = false;
+      setLeadSent(false);
     }
   };
 
@@ -3667,12 +3694,8 @@ function Contact() {
     await streamResponse(apiMessages);
 
     // Auto-submit lead after 6+ messages (conversation is substantive)
-    // Use a timeout to ensure state has settled after streaming
-    if (newMessages.length >= 6 && !leadSent) {
-      setTimeout(() => {
-        // Read the latest messages from the DOM after streaming is done
-        submitLead();
-      }, 2000);
+    if (newMessages.length >= 6 && !leadSentRef.current) {
+      setTimeout(() => submitLead(), 1000);
     }
   };
 
