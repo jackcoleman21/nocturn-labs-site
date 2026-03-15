@@ -5,6 +5,14 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: 'es2020',
+    cssMinify: true,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        passes: 2,
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {

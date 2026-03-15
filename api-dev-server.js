@@ -22,7 +22,21 @@ const server = createServer(async (req, res) => {
       try { req.body = JSON.parse(body); } catch { req.body = {}; }
       
       if (req.url === '/api/chat') return chatHandler(req, res);
-      if (req.url === '/api/lead') return leadHandler(req, res);
+      
+      if (req.url === '/api/lead') {
+        // Shim Vercel's res.status().json() for local dev
+        res.status = (code) => {
+          res.statusCode = code;
+          return {
+            json: (data) => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(data));
+            },
+            end: () => res.end(),
+          };
+        };
+        return leadHandler(req, res);
+      }
       
       res.writeHead(404); res.end('Not found');
     });

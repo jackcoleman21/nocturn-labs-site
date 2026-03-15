@@ -119,7 +119,7 @@ export default async function handler(req, res) {
             'Authorization': `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
-            from: 'Nocturn AI <onboarding@resend.dev>',
+            from: 'Nocturn AI <nocturn@nocturnlabs.com>',
             to: [notifyEmail],
             subject: `🔥 New Lead: ${name} — ${projectType}`,
             html: emailHtml,
