@@ -3727,13 +3727,13 @@ function Contact() {
       setLeadSent(true);
       console.log('[Nocturn] Email + brief detected, submitting complete lead...');
       submitLead();
-    } else if (hasEmail && messagesRef.current.length >= 10) {
-      // Have email but no brief detected after many messages — submit anyway
+    } else if (hasEmail && messagesRef.current.length >= 16) {
+      // Have email but no brief keywords after many messages — submit anyway
       leadSentRef.current = true;
       setLeadSent(true);
       console.log('[Nocturn] Email + long conversation, submitting lead...');
       submitLead();
-    } else if (messagesRef.current.length >= 14 && !hasEmail) {
+    } else if (messagesRef.current.length >= 20 && !hasEmail) {
       // Very long conversation without email — capture transcript anyway
       leadSentRef.current = true;
       setLeadSent(true);
